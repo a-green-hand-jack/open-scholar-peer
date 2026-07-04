@@ -88,7 +88,7 @@ Or just run `/open-scholar-peer` at any time — it reads your session state and
 
 ## Literature Databases
 
-OSP currently connects to arXiv and Semantic Scholar for paper discovery and evidence gathering.
+OSP connects to 12 literature databases for paper discovery and evidence gathering.
 
 | Database | Support | API Key |
 | --- | --- | --- |
