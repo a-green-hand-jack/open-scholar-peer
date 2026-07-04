@@ -112,6 +112,14 @@ export IEEE_XPLORE_API_KEY=...
 ```
 Restart your AI tool to pick up the new env var.
 
+### `search_sciencedirect` returns "SCIENCEDIRECT_API_KEY is not set"
+
+ScienceDirect's Search API has no anonymous tier — every request needs a key. Get a free one at https://dev.elsevier.com/ (register, then create an API key) and export it:
+```bash
+export SCIENCEDIRECT_API_KEY=...
+```
+Restart your AI tool to pick up the new env var. Note that without an institutional subscription, `abstract` in `get_sciencedirect_paper_details` is frequently null — Elsevier gates full abstracts behind entitlements.
+
 ### `osp` server starts but tools return errors
 
 Each tool has consistent error envelopes. Look for entries like `[{"error": "..."}]` in the AI tool's output and check:

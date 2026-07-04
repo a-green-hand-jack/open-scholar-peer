@@ -31,6 +31,10 @@ Single FastMCP server exposing academic-search tools across three providers.
 - `search_ieee_xplore(query, max_results=10)`
 - `get_ieee_xplore_paper_details(article_number_or_doi)`
 
+### ScienceDirect (API key required; abstract/full text depend on entitlement)
+- `search_sciencedirect(query, max_results=10)`
+- `get_sciencedirect_paper_details(identifier)`
+
 ## Setup
 
 The installer (`bash install.sh`) copies this server into `<your-project>/.open-scholar-peer/mcp/` and creates a Python virtualenv with all dependencies. You don't need to manage it manually.
@@ -82,6 +86,14 @@ Free at: https://developer.ieee.org/ (register, then create a Metadata API key f
 export IEEE_XPLORE_API_KEY=...
 ```
 Without a key, `search_ieee_xplore`/`get_ieee_xplore_paper_details` return an error envelope instead of failing the server.
+
+## Getting an Elsevier (ScienceDirect) API key
+
+Free at: https://dev.elsevier.com/ (register, then create an API key). Set it at install time or later via env var:
+```bash
+export SCIENCEDIRECT_API_KEY=...
+```
+Without a key, `search_sciencedirect`/`get_sciencedirect_paper_details` return an error envelope instead of failing the server. Note: without an institutional subscription, abstracts are often unavailable — only bibliographic metadata is guaranteed.
 
 ## Extending — adding a new provider
 

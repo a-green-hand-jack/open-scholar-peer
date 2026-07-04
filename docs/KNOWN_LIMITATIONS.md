@@ -153,4 +153,16 @@ mv .brain .brain.archive-$(date +%F)
 
 **Workaround:** Get a free key at https://developer.ieee.org/ and set `IEEE_XPLORE_API_KEY`. If you hit quota limits, space out literature-review sessions or request a higher quota from IEEE.
 
+---
+
+## 12. ScienceDirect metadata depth depends on your Elsevier entitlements
+
+**What:** `osp_mcp.search_sciencedirect`/`get_sciencedirect_paper_details` wrap the Elsevier Search API V2 and Article Retrieval API. They require `SCIENCEDIRECT_API_KEY` (no anonymous tier) but the *depth* of what comes back — abstracts in particular — depends on whether your API key is tied to a subscribing institution.
+
+**Limitation:** Without an institutional subscription, expect reliable bibliographic metadata (title, authors, DOI, venue, cover date) but `abstract` is frequently null, and full text is never available through these tools.
+
+**Impact:** Abstract-dependent verification steps (e.g. the Answer Generator's claim cross-checking) may need to fall back to another source when `abstract` is null for a ScienceDirect-only result.
+
+**Workaround:** Get a free key at https://dev.elsevier.com/ and set `SCIENCEDIRECT_API_KEY`. If your organization has an Elsevier subscription, using a key associated with it (or adding `X-ELS-Insttoken`-style institutional access, not currently wired into this provider) unlocks richer metadata.
+
 **Future:** Cascading invalidation (e.g. re-running `/1-osp-summary` resets `phases.qa` to `pending`) is on the roadmap.
