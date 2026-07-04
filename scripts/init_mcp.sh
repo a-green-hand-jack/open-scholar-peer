@@ -134,6 +134,14 @@ if [[ -z "$SPRINGER_API_KEY" ]]; then
   echo "     Then add to your shell profile: export SPRINGER_API_KEY=..."
 fi
 
+# IEEE Xplore requires a key for all requests (no anonymous tier)
+if [[ -z "$IEEE_XPLORE_API_KEY" ]]; then
+  echo ""
+  echo -e "  ${YELLOW}ℹ️  IEEE Xplore API key not set — search_ieee_xplore tools will return errors until set.${NC}"
+  echo "     Get a free key at https://developer.ieee.org/"
+  echo "     Then add to your shell profile: export IEEE_XPLORE_API_KEY=..."
+fi
+
 # Create .env at project root if it doesn't exist (for API keys + tunables)
 ENV_FILE="./.env"
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -151,6 +159,10 @@ if [[ ! -f "$ENV_FILE" ]]; then
 # Springer Nature API key — free at https://dev.springernature.com/
 # Required for search_springer/get_springer_paper_details (no anonymous tier).
 # SPRINGER_API_KEY=...
+
+# IEEE Xplore API key — free at https://developer.ieee.org/
+# Required for search_ieee_xplore/get_ieee_xplore_paper_details (no anonymous tier).
+# IEEE_XPLORE_API_KEY=...
 
 # ACM Digital Library (via Crossref) needs no key. Optionally set your email
 # to join Crossref's "polite pool" for steadier rate limits:

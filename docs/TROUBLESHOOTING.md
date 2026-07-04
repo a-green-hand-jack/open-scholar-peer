@@ -104,6 +104,14 @@ export SPRINGER_API_KEY=...
 ```
 Restart your AI tool to pick up the new env var.
 
+### `search_ieee_xplore` returns "IEEE_XPLORE_API_KEY is not set"
+
+IEEE Xplore's Metadata API has no anonymous tier — every request needs a key. Get a free one at https://developer.ieee.org/ (register, then find your key under "My Account") and export it:
+```bash
+export IEEE_XPLORE_API_KEY=...
+```
+Restart your AI tool to pick up the new env var.
+
 ### `osp` server starts but tools return errors
 
 Each tool has consistent error envelopes. Look for entries like `[{"error": "..."}]` in the AI tool's output and check:

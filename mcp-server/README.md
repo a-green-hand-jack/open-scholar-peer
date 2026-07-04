@@ -27,6 +27,10 @@ Single FastMCP server exposing academic-search tools across three providers.
 - `search_springer(query, max_results=10)`
 - `get_springer_paper_details(doi)`
 
+### IEEE Xplore (API key required)
+- `search_ieee_xplore(query, max_results=10)`
+- `get_ieee_xplore_paper_details(article_number_or_doi)`
+
 ## Setup
 
 The installer (`bash install.sh`) copies this server into `<your-project>/.open-scholar-peer/mcp/` and creates a Python virtualenv with all dependencies. You don't need to manage it manually.
@@ -70,6 +74,14 @@ Free at: https://dev.springernature.com/ (sign up, then create a Meta API key). 
 export SPRINGER_API_KEY=...
 ```
 Without a key, `search_springer`/`get_springer_paper_details` return an error envelope instead of failing the server.
+
+## Getting an IEEE Xplore API key
+
+Free at: https://developer.ieee.org/ (register, then create a Metadata API key from "My Account"). Set it at install time or later via env var:
+```bash
+export IEEE_XPLORE_API_KEY=...
+```
+Without a key, `search_ieee_xplore`/`get_ieee_xplore_paper_details` return an error envelope instead of failing the server.
 
 ## Extending — adding a new provider
 

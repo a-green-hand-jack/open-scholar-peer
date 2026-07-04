@@ -7,6 +7,7 @@ Exposes academic-search tools across these providers:
   • Google Scholar — broad coverage including blog posts, theses, workshop papers
   • ACM Digital Library — via Crossref (member-scoped), no API key needed
   • Springer Nature — metadata + abstracts across articles/chapters/books; API key required
+  • IEEE Xplore — journals, conference proceedings, standards; API key required
 
 Design principles:
   1. Dumb tools only — no agentic logic. Each tool is atomic, stateless.
@@ -22,6 +23,8 @@ Environment variables:
                               (steadier rate limits for ACM lookups). No key required.
   SPRINGER_API_KEY         — required for Springer tools; free at
                               https://dev.springernature.com/
+  IEEE_XPLORE_API_KEY      — required for IEEE Xplore tools; free at
+                              https://developer.ieee.org/
   OSP_CALL_TIMEOUT         — per-call timeout in seconds (default: 90).
 """
 from __future__ import annotations
@@ -38,6 +41,7 @@ from providers import semantic_scholar as ss_provider
 from providers import google_scholar as gs_provider
 from providers import acm as acm_provider
 from providers import springer as springer_provider
+from providers import ieee_xplore as ieee_provider
 
 try:
     from dotenv import load_dotenv
@@ -571,6 +575,64 @@ async def get_springer_paper_details(doi: str) -> dict[str, Any]:
         return {"error": f"get_springer_paper_details failed: {e}"}
 
 
+# ---------- IEEE Xplore ------------------------------------------------------
+
+@mcp.tool()
+async def search_ieee_xplore(query: str, max_results: int = 10) -> list[dict[str, Any]]:
+    """Search IEEE Xplore for journals, conference papers, and standards.
+
+    IEEE Xplore is the primary index for electrical engineering, electronics,
+    and computer science venues (IEEE/IET journals, IEEE conferences). Use for
+    venues not well covered by Semantic Scholar/arXiv (e.g. IEEE Transactions,
+    hardware/signal-processing conferences).
+
+    Requires IEEE_XPLORE_API_KEY (free at https://developer.ieee.org/).
+
+    Args:
+        query: Free-form query text.
+        max_results: Number of results (1-200, default 10).
+
+    Returns:
+        List of dicts with keys: articleNumber, doi, title, authors, abstract,
+        publicationTitle, publicationYear, publicationDate, contentType,
+        publisher, volume, issue, startPage, endPage, citingPaperCount,
+        htmlUrl, pdfUrl. Returns [{"error": "..."}] if the key is
+        missing/invalid or the request fails.
+    """
+    log.info("search_ieee_xplore(query=%r, max_results=%d)", query, max_results)
+    try:
+        return await _run(ieee_provider.search, query, max_results)
+    except Exception as e:
+        return [{"error": f"search_ieee_xplore failed: {e}"}]
+
+
+@mcp.tool()
+async def get_ieee_xplore_paper_details(article_number_or_doi: str) -> dict[str, Any]:
+    """Fetch a single IEEE Xplore record by article number or DOI.
+
+    Use after search_ieee_xplore, or when you already have an IEEE article
+    number (e.g. "10093112") or DOI (e.g. "10.1109/TDSC.2023.3264567") from a
+    citation and want the full record.
+
+    Requires IEEE_XPLORE_API_KEY (free at https://developer.ieee.org/).
+
+    Args:
+        article_number_or_doi: An IEEE article number, or a DOI (detected by
+            the presence of "/").
+
+    Returns:
+        Dict with keys: articleNumber, doi, title, authors, abstract,
+        publicationTitle, publicationYear, publicationDate, contentType,
+        publisher, volume, issue, startPage, endPage, citingPaperCount,
+        htmlUrl, pdfUrl. Returns {"error": "..."} on failure.
+    """
+    log.info("get_ieee_xplore_paper_details(id=%r)", article_number_or_doi)
+    try:
+        return await _run(ieee_provider.get_details, article_number_or_doi)
+    except Exception as e:
+        return {"error": f"get_ieee_xplore_paper_details failed: {e}"}
+
+
 # ---------- Server entrypoint ----------------------------------------------
 
 if __name__ == "__main__":
@@ -580,5 +642,7 @@ if __name__ == "__main__":
         log.info("No SEMANTIC_SCHOLAR_API_KEY in env — Semantic Scholar will use anonymous limits.")
     if not os.environ.get("SPRINGER_API_KEY"):
         log.info("No SPRINGER_API_KEY in env — Springer tools will return an error envelope until set.")
+    if not os.environ.get("IEEE_XPLORE_API_KEY"):
+        log.info("No IEEE_XPLORE_API_KEY in env — IEEE Xplore tools will return an error envelope until set.")
     log.info("Starting Open ScholarPeer MCP server (osp_mcp), timeout=%ds", _TIMEOUT)
     mcp.run(transport="stdio")

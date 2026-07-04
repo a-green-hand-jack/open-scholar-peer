@@ -141,4 +141,16 @@ mv .brain .brain.archive-$(date +%F)
 
 **Workaround:** Get a free key at https://dev.springernature.com/ and set `SPRINGER_API_KEY`.
 
+---
+
+## 11. IEEE Xplore has no anonymous tier and a per-account request quota
+
+**What:** Like Springer, IEEE Xplore's Metadata API rejects every request without a valid `apikey`. `osp_mcp.search_ieee_xplore`/`get_ieee_xplore_paper_details` return `[{"error": "..."}]` until `IEEE_XPLORE_API_KEY` is set.
+
+**Limitation:** Free developer accounts get a limited daily/monthly call quota (check your account at https://developer.ieee.org/ for the exact number — it has changed over time and depends on account type). Heavy literature-review sessions (3 rounds × multiple queries) can burn through a small quota quickly.
+
+**Impact:** Without a key, or after exhausting quota, IEEE Xplore silently drops out as a source; the Literature Agent still has arXiv/Semantic Scholar/Google Scholar/ACM/Springer as coverage. This mainly affects electrical-engineering and hardware-adjacent CS papers.
+
+**Workaround:** Get a free key at https://developer.ieee.org/ and set `IEEE_XPLORE_API_KEY`. If you hit quota limits, space out literature-review sessions or request a higher quota from IEEE.
+
 **Future:** Cascading invalidation (e.g. re-running `/1-osp-summary` resets `phases.qa` to `pending`) is on the roadmap.

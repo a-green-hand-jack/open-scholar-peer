@@ -99,7 +99,7 @@ OSP currently connects to arXiv and Semantic Scholar for paper discovery and evi
 | medRxiv | 🚧 Soon | Not Required |
 | DBLP | 🚧 Soon | Not Required |
 | ACM | ✅ | Not Required |
-| IEEE | 🚧 Soon | Required |
+| IEEE | ✅ | Required |
 | WoS | 🚧 Soon | Required |
 | Scopus | 🚧 Soon | Required |
 | Springer | ✅ | Required |
@@ -115,11 +115,14 @@ The installer creates a `.env` file at your project root. Add your keys there:
 # .env  (gitignored — never committed)
 SEMANTIC_SCHOLAR_API_KEY=sk-...
 SPRINGER_API_KEY=...
+IEEE_XPLORE_API_KEY=...
 ```
 
 Anonymous Semantic Scholar limits are tight. Get a free key at https://www.semanticscholar.org/product/api#api-key — the MCP server loads `.env` automatically on startup.
 
 Springer requires a key for all requests — get a free one at https://dev.springernature.com/.
+
+IEEE Xplore requires a key for all requests — get a free one at https://developer.ieee.org/.
 
 ---
 
