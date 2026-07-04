@@ -54,6 +54,13 @@ In **every round** you MUST dispatch **all available retrieval tools simultaneou
 - `osp-mcp.search_dblp` — computer-science bibliography, canonical venue/year metadata
 - `osp-mcp.search_pubmed` — biomedical/life-science literature
 - `osp-mcp.search_biorxiv` — biology pre-prints
+- `osp-mcp.search_medrxiv` — medical pre-prints
+- `osp-mcp.search_wos` — Web of Science citation index (requires WOS_API_KEY)
+- `osp-mcp.search_scopus` — Scopus citation index (requires SCOPUS_API_KEY)
+- `osp-mcp.search_sciencedirect` — ScienceDirect full-text index (requires SCIENCEDIRECT_API_KEY)
+- `osp-mcp.search_ieee_xplore` — IEEE Xplore index (requires IEEE_XPLORE_API_KEY)
+- `osp-mcp.search_acm` — ACM Digital Library (via Crossref, no key required)
+- `osp-mcp.search_springer` — Springer Nature index (requires SPRINGER_API_KEY)
 - Native `Web Search` (when your host tool provides one) — non-academic mentions, news, blog summaries
 
 **Simultaneously** means: fire all tools in the same dispatch batch, not one after the other. Each tool gets a query formulation tailored to its index — the arxiv query stresses category + keywords, the semantic_scholar query stresses citations + field-of-study, the web search query adds the venue name for recency. Do not wait for one result before starting the next.

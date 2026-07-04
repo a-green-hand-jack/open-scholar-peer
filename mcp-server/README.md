@@ -31,6 +31,18 @@ Single FastMCP server exposing academic-search tools across multiple providers.
 - `search_biorxiv(query, max_results=10)`
 - `get_biorxiv_preprint_details(doi)`
 
+### medRxiv (no API key needed)
+- `search_medrxiv(query, max_results=10, days_back=365)`
+- `get_medrxiv_paper_details(doi)`
+
+### Web of Science (API key required)
+- `search_wos(query, max_results=10, database="WOS")`
+- `get_wos_paper_details(doi, database="WOS")`
+
+### Scopus (API key required)
+- `search_scopus(query, max_results=10)`
+- `get_scopus_paper_details(doi)`
+
 ## Setup
 
 The installer (`bash install.sh`) copies this server into `<your-project>/.open-scholar-peer/mcp/` and creates a Python virtualenv with all dependencies. You don't need to manage it manually.
@@ -59,6 +71,23 @@ Set it at install time or later via env var:
 ```bash
 export SEMANTIC_SCHOLAR_API_KEY=sk-...
 ```
+
+## Getting a Web of Science API key
+
+Requires an institutional/paid Clarivate subscription. Register an application at https://developer.clarivate.com/apis/wos-starter to obtain a key, then set:
+```bash
+export WOS_API_KEY=...
+```
+Without it, `search_wos` and `get_wos_paper_details` return `{"error": "..."}`.
+
+## Getting a Scopus API key
+
+Register a free API key at https://dev.elsevier.com/. Full result sets typically also require requests to originate from a subscribing institution's network, or an institutional token:
+```bash
+export SCOPUS_API_KEY=...
+export SCOPUS_INST_TOKEN=...  # optional, for institutional access
+```
+Without `SCOPUS_API_KEY`, `search_scopus` and `get_scopus_paper_details` return `{"error": "..."}`.
 
 ## Extending — adding a new provider
 

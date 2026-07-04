@@ -11,6 +11,13 @@
   - `osp-mcp.search_dblp`
   - `osp-mcp.search_pubmed`
   - `osp-mcp.search_biorxiv`
+  - `osp-mcp.search_medrxiv`
+  - `osp-mcp.search_wos`
+  - `osp-mcp.search_scopus`
+  - `osp-mcp.search_sciencedirect`
+  - `osp-mcp.search_ieee_xplore`
+  - `osp-mcp.search_acm`
+  - `osp-mcp.search_springer`
   - native Web Search (where available)
 - **Query formulation rules for this round:**
   - Round 1 (sub-domain-anchor): use the paper's stated sub-domain and primary keywords; aim for the canonical 10–20 most-cited works in this area.

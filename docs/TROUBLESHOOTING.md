@@ -91,6 +91,22 @@ Each tool has consistent error envelopes. Look for entries like `[{"error": "...
 - Network connectivity (`curl https://api.semanticscholar.org/graph/v1/paper/search?query=test`)
 - For Google Scholar tools: HTML scraping may have hit a rate limit; wait 5-10 minutes.
 
+### `search_wos` / `get_wos_paper_details` return `{"error": "WOS_API_KEY is not set..."}`
+
+Web of Science requires an institutional/paid Clarivate subscription. Register at https://developer.clarivate.com/apis/wos-starter and export the key:
+```bash
+export WOS_API_KEY=...
+```
+Add to your shell profile so it persists across sessions, then restart your AI tool.
+
+### `search_scopus` / `get_scopus_paper_details` return `{"error": "SCOPUS_API_KEY is not set..."}`
+
+Register a free key at https://dev.elsevier.com/ and export it:
+```bash
+export SCOPUS_API_KEY=...
+```
+Full result sets typically also require requests to originate from a subscribing institution's network, or an `SCOPUS_INST_TOKEN`. If searches succeed but return fewer/thinner results than expected, this is likely why.
+
 ---
 
 ## Workflow issues

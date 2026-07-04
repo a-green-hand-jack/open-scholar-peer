@@ -2,12 +2,15 @@
 osp_mcp.py — Open ScholarPeer consolidated MCP server.
 
 Exposes academic-search tools across multiple providers:
-  • arXiv          — pre-prints, no API key needed
-  • Semantic Scholar — citation graph, abstracts; API key recommended for higher rate limits
-  • Google Scholar — broad coverage including blog posts, theses, workshop papers
-  • DBLP           — computer-science bibliography, no API key needed
-  • PubMed         — biomedical/life-science literature, no API key needed
-  • bioRxiv        — biology pre-prints, no API key needed
+  • arXiv            — pre-prints, no API key needed
+  • Semantic Scholar  — citation graph, abstracts; API key recommended for higher rate limits
+  • Google Scholar    — broad coverage including blog posts, theses, workshop papers
+  • DBLP              — computer-science bibliography, no API key needed
+  • PubMed            — biomedical/life-science literature, no API key needed
+  • bioRxiv           — biology pre-prints, no API key needed
+  • medRxiv           — medical pre-prints, no API key needed
+  • Web of Science    — Clarivate citation index; API key required
+  • Scopus            — Elsevier citation index; API key required
 
 Design principles:
   1. Dumb tools only — no agentic logic. Each tool is atomic, stateless.
@@ -19,6 +22,9 @@ Design principles:
 
 Environment variables:
   SEMANTIC_SCHOLAR_API_KEY — optional; provides higher rate limits if set.
+  WOS_API_KEY              — required for Web of Science tools.
+  SCOPUS_API_KEY           — required for Scopus tools.
+  SCOPUS_INST_TOKEN        — optional; institutional token for full Scopus results.
   OSP_CALL_TIMEOUT         — per-call timeout in seconds (default: 90).
 """
 from __future__ import annotations
@@ -36,6 +42,9 @@ from providers import google_scholar as gs_provider
 from providers import dblp as dblp_provider
 from providers import pubmed as pubmed_provider
 from providers import biorxiv as biorxiv_provider
+from providers import medrxiv as medrxiv_provider
+from providers import wos as wos_provider
+from providers import scopus as scopus_provider
 
 try:
     from dotenv import load_dotenv
@@ -606,6 +615,166 @@ async def get_biorxiv_preprint_details(doi: str) -> dict[str, Any]:
         return {"error": f"get_biorxiv_preprint_details failed: {e}"}
 
 
+# ---------- medRxiv ----------------------------------------------------------
+
+@mcp.tool()
+async def search_medrxiv(query: str, max_results: int = 10, days_back: int = 365) -> list[dict[str, Any]]:
+    """Search medRxiv for medical pre-prints.
+
+    medRxiv is the primary pre-print server for medicine and health sciences.
+    Use for recent clinical/epidemiological work that may not yet be
+    peer-reviewed or indexed by Semantic Scholar.
+
+    Note: the underlying CSHL API has no keyword-search endpoint — this tool
+    scans the recent-posts feed (bounded by `days_back`) and filters
+    client-side on title/abstract. Very old or narrowly-worded queries may
+    return fewer results than a true search engine would. See
+    docs/KNOWN_LIMITATIONS.md.
+
+    Args:
+        query: Free-form keywords (all terms must appear in title or abstract).
+        max_results: Number of results (1-100, default 10).
+        days_back: How many days of recent postings to scan (default 365).
+
+    Returns:
+        List of dicts with keys: doi, title, authors, corresponding_author,
+        corresponding_institution, date, version, category, abstract,
+        license, published_journal_doi, url. Returns [{"error": "..."}] on failure.
+    """
+    log.info("search_medrxiv(query=%r, max_results=%d, days_back=%d)", query, max_results, days_back)
+    try:
+        return await _run(medrxiv_provider.search, query, max_results, days_back)
+    except Exception as e:
+        return [{"error": f"search_medrxiv failed: {e}"}]
+
+
+@mcp.tool()
+async def get_medrxiv_paper_details(doi: str) -> dict[str, Any]:
+    """Fetch metadata for a specific medRxiv pre-print by DOI.
+
+    Args:
+        doi: The medRxiv DOI (e.g. "10.1101/2021.01.01.21249056").
+
+    Returns:
+        Dict with keys: doi, title, authors, corresponding_author,
+        corresponding_institution, date, version, category, abstract,
+        license, published_journal_doi, url. Returns {"error": "..."} on failure.
+    """
+    log.info("get_medrxiv_paper_details(doi=%r)", doi)
+    try:
+        return await _run(medrxiv_provider.get_details, doi)
+    except Exception as e:
+        return {"error": f"get_medrxiv_paper_details failed: {e}"}
+
+
+# ---------- Web of Science --------------------------------------------------
+
+@mcp.tool()
+async def search_wos(query: str, max_results: int = 10, database: str = "WOS") -> list[dict[str, Any]]:
+    """Search Web of Science Core Collection.
+
+    Web of Science (Clarivate) is a cross-disciplinary citation index widely
+    used for bibliometrics and rigorous prior-art checks. Requires a
+    WOS_API_KEY (institutional/paid Clarivate subscription); returns a clean
+    error if unset.
+
+    Query tips (Web of Science field tags):
+      TS=(machine learning)     → topic search (title/abstract/keywords)
+      AU=(Vaswani A)            → author search
+      DO=10.1038/nature14539    → DOI lookup
+      PY=2024                   → publication year
+
+    Args:
+        query: Web of Science field-tagged query string (e.g. 'TS=(transformer)').
+        max_results: Number of results (1-50, default 10).
+        database: Database identifier (default "WOS" = Core Collection).
+
+    Returns:
+        List of dicts with keys: uid, title, authors, doi, source_title,
+        publish_year, times_cited, document_type, url.
+        Returns [{"error": "..."}] on failure or missing WOS_API_KEY.
+    """
+    log.info("search_wos(query=%r, max_results=%d, database=%s)", query, max_results, database)
+    try:
+        return await _run(wos_provider.search, query, max_results, database)
+    except Exception as e:
+        return [{"error": f"search_wos failed: {e}"}]
+
+
+@mcp.tool()
+async def get_wos_paper_details(doi: str, database: str = "WOS") -> dict[str, Any]:
+    """Fetch a Web of Science record by DOI.
+
+    Requires a WOS_API_KEY (institutional/paid Clarivate subscription);
+    returns a clean error if unset.
+
+    Args:
+        doi: The paper's DOI (e.g. "10.1038/nature14539").
+        database: Database identifier (default "WOS" = Core Collection).
+
+    Returns:
+        Dict with keys: uid, title, authors, doi, source_title, publish_year,
+        times_cited, document_type, url. Returns {"error": "..."} on failure
+        or missing WOS_API_KEY.
+    """
+    log.info("get_wos_paper_details(doi=%r, database=%s)", doi, database)
+    try:
+        return await _run(wos_provider.get_details, doi, database)
+    except Exception as e:
+        return {"error": f"get_wos_paper_details failed: {e}"}
+
+
+# ---------- Scopus -----------------------------------------------------------
+
+@mcp.tool()
+async def search_scopus(query: str, max_results: int = 10) -> list[dict[str, Any]]:
+    """Search Scopus (Elsevier) for academic papers across all fields.
+
+    Scopus is one of the largest abstract-and-citation databases, strong for
+    engineering, life sciences, and social sciences coverage. Requires a
+    SCOPUS_API_KEY (Elsevier Developer key; full results typically need
+    institutional network access or SCOPUS_INST_TOKEN); returns a clean
+    error if unset.
+
+    Args:
+        query: Boolean query string (e.g. 'TITLE-ABS-KEY(large language models)').
+        max_results: Number of results (1-100, default 10).
+
+    Returns:
+        List of dicts with keys: scopus_id, eid, title, creator, doi,
+        publication_name, cover_date, cited_by_count, aggregation_type, url.
+        Returns [{"error": "..."}] on failure or missing SCOPUS_API_KEY.
+    """
+    log.info("search_scopus(query=%r, max_results=%d)", query, max_results)
+    try:
+        return await _run(scopus_provider.search, query, max_results)
+    except Exception as e:
+        return [{"error": f"search_scopus failed: {e}"}]
+
+
+@mcp.tool()
+async def get_scopus_paper_details(doi: str) -> dict[str, Any]:
+    """Fetch a Scopus abstract record by DOI.
+
+    Requires a SCOPUS_API_KEY (Elsevier Developer key; full results
+    typically need institutional network access or SCOPUS_INST_TOKEN);
+    returns a clean error if unset.
+
+    Args:
+        doi: The paper's DOI (e.g. "10.1038/nature14539").
+
+    Returns:
+        Dict with keys: scopus_id, title, abstract, creator, doi,
+        publication_name, cover_date, cited_by_count, aggregation_type.
+        Returns {"error": "..."} on failure or missing SCOPUS_API_KEY.
+    """
+    log.info("get_scopus_paper_details(doi=%r)", doi)
+    try:
+        return await _run(scopus_provider.get_details, doi)
+    except Exception as e:
+        return {"error": f"get_scopus_paper_details failed: {e}"}
+
+
 # ---------- Server entrypoint ----------------------------------------------
 
 if __name__ == "__main__":
@@ -613,5 +782,9 @@ if __name__ == "__main__":
         log.info("Semantic Scholar API key detected — higher rate limits enabled.")
     else:
         log.info("No SEMANTIC_SCHOLAR_API_KEY in env — Semantic Scholar will use anonymous limits.")
+    if not os.environ.get("WOS_API_KEY"):
+        log.info("No WOS_API_KEY in env — Web of Science tools will return an error envelope.")
+    if not os.environ.get("SCOPUS_API_KEY"):
+        log.info("No SCOPUS_API_KEY in env — Scopus tools will return an error envelope.")
     log.info("Starting Open ScholarPeer MCP server (osp_mcp), timeout=%ds", _TIMEOUT)
     mcp.run(transport="stdio")
