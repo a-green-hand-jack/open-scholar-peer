@@ -1,6 +1,6 @@
 # `osp_mcp` — Open ScholarPeer MCP Server
 
-Single FastMCP server exposing academic-search tools across three providers.
+Single FastMCP server exposing academic-search tools across multiple providers.
 
 ## Tools
 
@@ -18,6 +18,18 @@ Single FastMCP server exposing academic-search tools across three providers.
 - `search_google_scholar(query, num_results=5)`
 - `search_google_scholar_advanced(query, author=None, year_start=None, year_end=None, num_results=5)`
 - `get_google_scholar_author_info(author_name)`
+
+### DBLP (no API key needed)
+- `search_dblp(query, max_results=10)`
+- `get_dblp_publication_details(key)`
+
+### PubMed (no API key needed)
+- `search_pubmed(query, max_results=10)`
+- `get_pubmed_article_details(pmid)`
+
+### bioRxiv (no API key needed; search is proxied via Europe PMC — see providers/biorxiv.py docstring)
+- `search_biorxiv(query, max_results=10)`
+- `get_biorxiv_preprint_details(doi)`
 
 ## Setup
 

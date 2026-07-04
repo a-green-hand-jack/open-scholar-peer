@@ -1,10 +1,13 @@
 """
 osp_mcp.py — Open ScholarPeer consolidated MCP server.
 
-Exposes academic-search tools across three providers:
+Exposes academic-search tools across multiple providers:
   • arXiv          — pre-prints, no API key needed
   • Semantic Scholar — citation graph, abstracts; API key recommended for higher rate limits
   • Google Scholar — broad coverage including blog posts, theses, workshop papers
+  • DBLP           — computer-science bibliography, no API key needed
+  • PubMed         — biomedical/life-science literature, no API key needed
+  • bioRxiv        — biology pre-prints, no API key needed
 
 Design principles:
   1. Dumb tools only — no agentic logic. Each tool is atomic, stateless.
@@ -30,6 +33,9 @@ from mcp.server.fastmcp import FastMCP
 from providers import arxiv as arxiv_provider
 from providers import semantic_scholar as ss_provider
 from providers import google_scholar as gs_provider
+from providers import dblp as dblp_provider
+from providers import pubmed as pubmed_provider
+from providers import biorxiv as biorxiv_provider
 
 try:
     from dotenv import load_dotenv
@@ -451,6 +457,153 @@ async def get_google_scholar_author_info(author_name: str) -> dict[str, Any]:
         return await _run(gs_provider.get_author_info, author_name)
     except Exception as e:
         return {"error": f"get_google_scholar_author_info failed: {e}"}
+
+
+# ---------- DBLP ------------------------------------------------------------
+
+@mcp.tool()
+async def search_dblp(query: str, max_results: int = 10) -> list[dict[str, Any]]:
+    """Search DBLP, the open computer-science bibliography.
+
+    DBLP has excellent coverage of CS conference and journal publications
+    (author-curated, low noise) but no abstracts. Use to confirm a paper's
+    canonical venue/year, or to find an author's CS publication record when
+    Semantic Scholar's index is incomplete.
+
+    Args:
+        query: Free-form search query (e.g. "transformer attention",
+            "author:Yoshua_Bengio").
+        max_results: Maximum number of results (1-100, default 10).
+
+    Returns:
+        List of dicts with keys: key, title, authors, year, venue, type,
+        pages, volume, doi, ee, url. Returns [{"error": "..."}] on failure.
+    """
+    log.info("search_dblp(query=%r, max_results=%d)", query, max_results)
+    try:
+        return await _run(dblp_provider.search, query, max_results)
+    except Exception as e:
+        return [{"error": f"search_dblp failed: {e}"}]
+
+
+@mcp.tool()
+async def get_dblp_publication_details(key: str) -> dict[str, Any]:
+    """Fetch full metadata for a specific DBLP publication by its record key.
+
+    Use after search_dblp to confirm venue details, or when you already have
+    a DBLP key (e.g. from a citation) and need canonical metadata.
+
+    Args:
+        key: DBLP record key (e.g. "conf/dac/ZhangYY21" or
+            "journals/corr/abs-2509-16058").
+
+    Returns:
+        Dict with keys: key, type, title, authors, year, venue, pages,
+        volume, doi, ee, url. Returns {"error": "..."} on failure.
+    """
+    log.info("get_dblp_publication_details(key=%r)", key)
+    try:
+        return await _run(dblp_provider.get_publication_details, key)
+    except Exception as e:
+        return {"error": f"get_dblp_publication_details failed: {e}"}
+
+
+# ---------- PubMed -----------------------------------------------------------
+
+@mcp.tool()
+async def search_pubmed(query: str, max_results: int = 10) -> list[dict[str, Any]]:
+    """Search PubMed for biomedical and life-science literature.
+
+    PubMed is the authoritative index for medicine, biology, and health
+    sciences. Use when the paper under review touches clinical, biological,
+    or medical topics that arXiv/Semantic Scholar's CS/ML-heavy indexes may
+    under-cover.
+
+    Args:
+        query: Free-form search query. Supports PubMed field tags (e.g.
+            "cancer[Title] AND 2024[PDAT]").
+        max_results: Maximum number of results (1-100, default 10).
+
+    Returns:
+        List of dicts with keys: pmid, title, authors, abstract, journal,
+        year, doi, url. Returns [{"error": "..."}] on failure.
+    """
+    log.info("search_pubmed(query=%r, max_results=%d)", query, max_results)
+    try:
+        return await _run(pubmed_provider.search, query, max_results)
+    except Exception as e:
+        return [{"error": f"search_pubmed failed: {e}"}]
+
+
+@mcp.tool()
+async def get_pubmed_article_details(pmid: str) -> dict[str, Any]:
+    """Fetch full metadata (including abstract) for a specific PubMed article.
+
+    Use after search_pubmed, or when you already have a PMID from a citation.
+
+    Args:
+        pmid: PubMed ID (e.g. "42399389").
+
+    Returns:
+        Dict with keys: pmid, title, authors, abstract, journal, year, doi,
+        url. Returns {"error": "..."} on failure.
+    """
+    log.info("get_pubmed_article_details(pmid=%r)", pmid)
+    try:
+        return await _run(pubmed_provider.get_details, pmid)
+    except Exception as e:
+        return {"error": f"get_pubmed_article_details failed: {e}"}
+
+
+# ---------- bioRxiv -----------------------------------------------------------
+
+@mcp.tool()
+async def search_biorxiv(query: str, max_results: int = 10) -> list[dict[str, Any]]:
+    """Search bioRxiv for biology pre-prints.
+
+    bioRxiv is the primary pre-print server for biology, analogous to arXiv
+    for CS/physics. Use when you need very recent unreviewed biology work
+    that PubMed (which indexes only peer-reviewed journals) won't have yet.
+
+    Note: bioRxiv's own API has no keyword search, so discovery is done via
+    Europe PMC filtered to bioRxiv-published preprints; all returned metadata
+    is then resolved against bioRxiv's own canonical record.
+
+    Args:
+        query: Free-form search query.
+        max_results: Maximum number of results (1-100, default 10).
+
+    Returns:
+        List of dicts with keys: doi, title, authors, abstract, date,
+        version, category, license, published, url. Returns [{"error": "..."}]
+        on failure.
+    """
+    log.info("search_biorxiv(query=%r, max_results=%d)", query, max_results)
+    try:
+        return await _run(biorxiv_provider.search, query, max_results)
+    except Exception as e:
+        return [{"error": f"search_biorxiv failed: {e}"}]
+
+
+@mcp.tool()
+async def get_biorxiv_preprint_details(doi: str) -> dict[str, Any]:
+    """Fetch canonical bioRxiv metadata for a preprint by DOI.
+
+    Use after search_biorxiv, or when you already have a bioRxiv DOI from a
+    citation. Returns the latest posted version's metadata.
+
+    Args:
+        doi: bioRxiv DOI (e.g. "10.1101/2025.01.22.634394").
+
+    Returns:
+        Dict with keys: doi, title, authors, abstract, date, version,
+        category, license, published, url. Returns {"error": "..."} on failure.
+    """
+    log.info("get_biorxiv_preprint_details(doi=%r)", doi)
+    try:
+        return await _run(biorxiv_provider.get_details, doi)
+    except Exception as e:
+        return {"error": f"get_biorxiv_preprint_details failed: {e}"}
 
 
 # ---------- Server entrypoint ----------------------------------------------

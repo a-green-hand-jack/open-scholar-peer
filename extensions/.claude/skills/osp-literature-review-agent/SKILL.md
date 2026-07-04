@@ -51,6 +51,9 @@ In **every round** you MUST dispatch **all available retrieval tools simultaneou
 - `osp-mcp.search_arxiv` — pre-prints
 - `osp-mcp.search_semantic_scholar` — citation graph, well-indexed publications
 - `osp-mcp.search_google_scholar` — broader coverage: blogs, theses, workshop papers
+- `osp-mcp.search_dblp` — computer-science bibliography, canonical venue/year metadata
+- `osp-mcp.search_pubmed` — biomedical/life-science literature
+- `osp-mcp.search_biorxiv` — biology pre-prints
 - Native `Web Search` (when your host tool provides one) — non-academic mentions, news, blog summaries
 
 **Simultaneously** means: fire all tools in the same dispatch batch, not one after the other. Each tool gets a query formulation tailored to its index — the arxiv query stresses category + keywords, the semantic_scholar query stresses citations + field-of-study, the web search query adds the venue name for recency. Do not wait for one result before starting the next.
