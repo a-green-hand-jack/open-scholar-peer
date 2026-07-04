@@ -117,4 +117,16 @@ mv .brain .brain.archive-$(date +%F)
 
 **Workaround:** After re-running an earlier phase, manually re-run each subsequent phase, or run `/open-scholar-peer` and follow the dispatcher's guidance.
 
+---
+
+## 9. bioRxiv keyword search is proxied through Europe PMC
+
+**What:** bioRxiv's own API (`api.biorxiv.org`) has no keyword/full-text search endpoint — only DOI lookup and date-range browsing. `osp_mcp.search_biorxiv` works around this by querying Europe PMC's public search API filtered to bioRxiv-published preprints, then resolving each hit's DOI against bioRxiv's own details endpoint for canonical metadata.
+
+**Limitation:** Search recall/ranking depends on Europe PMC's indexing of bioRxiv content, which may lag bioRxiv's own posting time by a day or more. `get_biorxiv_preprint_details` (direct DOI lookup) is unaffected and always hits bioRxiv's canonical API.
+
+**Impact:** The most recently posted bioRxiv preprints (last 24-48h) may not yet appear in `search_biorxiv` results even though they exist on bioRxiv.
+
+**Workaround:** None needed for most use cases. If you need guaranteed-fresh results, use `get_biorxiv_preprint_details` with a known DOI, or browse bioRxiv directly for very recent postings.
+
 **Future:** Cascading invalidation (e.g. re-running `/1-osp-summary` resets `phases.qa` to `pending`) is on the roadmap.
