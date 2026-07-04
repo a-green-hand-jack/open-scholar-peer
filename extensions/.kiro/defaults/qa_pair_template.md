@@ -31,5 +31,5 @@
 ## Provenance
 
 - Papers cited in answers: <list with paperId/URL where available>
-- External tools used during answering: <web_search, osp-mcp.search_arxiv, osp-mcp.search_semantic_scholar, osp-mcp.search_acm, ...>
+- External tools used during answering: <web_search, osp-mcp.search_arxiv, osp-mcp.search_semantic_scholar, osp-mcp.search_acm, osp-mcp.search_springer, ...>
 - Discrepancy count: <N>

@@ -129,4 +129,16 @@ mv .brain .brain.archive-$(date +%F)
 
 **Workaround:** Set `CROSSREF_MAILTO` to your email for Crossref's "polite pool" (steadier rate limits, still no key/signup required). None needed otherwise.
 
+---
+
+## 10. Springer Nature has no anonymous tier
+
+**What:** Unlike Semantic Scholar, Springer's Meta API rejects every request without a valid `api_key` — there is no reduced anonymous fallback. `osp_mcp.search_springer`/`get_springer_paper_details` return `[{"error": "..."}]` until `SPRINGER_API_KEY` is set.
+
+**Limitation:** Exact request-quota numbers depend on your Springer Nature developer account plan; check https://dev.springernature.com/ after signup for your specific limits.
+
+**Impact:** Without a key, the Literature Agent and Baseline Scout silently lose Springer as a source (falls back to arXiv/Semantic Scholar/Google Scholar/ACM), which is fine for CS-heavy papers but reduces coverage for Springer-only venues (many life-sciences and engineering journals, LNCS proceedings).
+
+**Workaround:** Get a free key at https://dev.springernature.com/ and set `SPRINGER_API_KEY`.
+
 **Future:** Cascading invalidation (e.g. re-running `/1-osp-summary` resets `phases.qa` to `pending`) is on the roadmap.

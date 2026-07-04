@@ -23,6 +23,10 @@ Single FastMCP server exposing academic-search tools across three providers.
 - `search_acm(query, max_results=10)`
 - `get_acm_paper_details(doi)`
 
+### Springer Nature (API key required)
+- `search_springer(query, max_results=10)`
+- `get_springer_paper_details(doi)`
+
 ## Setup
 
 The installer (`bash install.sh`) copies this server into `<your-project>/.open-scholar-peer/mcp/` and creates a Python virtualenv with all dependencies. You don't need to manage it manually.
@@ -58,6 +62,14 @@ export SEMANTIC_SCHOLAR_API_KEY=sk-...
 ```bash
 export CROSSREF_MAILTO=you@example.com
 ```
+
+## Getting a Springer Nature API key
+
+Free at: https://dev.springernature.com/ (sign up, then create a Meta API key). Set it at install time or later via env var:
+```bash
+export SPRINGER_API_KEY=...
+```
+Without a key, `search_springer`/`get_springer_paper_details` return an error envelope instead of failing the server.
 
 ## Extending — adding a new provider
 

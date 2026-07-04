@@ -102,7 +102,7 @@ OSP currently connects to arXiv and Semantic Scholar for paper discovery and evi
 | IEEE | 🚧 Soon | Required |
 | WoS | 🚧 Soon | Required |
 | Scopus | 🚧 Soon | Required |
-| Springer | 🚧 Soon | Required |
+| Springer | ✅ | Required |
 | ScienceDirect | 🚧 Soon | Required |
 
 The literature search layers is implemented in [mcp-server/](mcp-server/), so you can extend it with additional scholarly sources when you have valid access credentials.
@@ -114,9 +114,12 @@ The installer creates a `.env` file at your project root. Add your keys there:
 ```bash
 # .env  (gitignored — never committed)
 SEMANTIC_SCHOLAR_API_KEY=sk-...
+SPRINGER_API_KEY=...
 ```
 
 Anonymous Semantic Scholar limits are tight. Get a free key at https://www.semanticscholar.org/product/api#api-key — the MCP server loads `.env` automatically on startup.
+
+Springer requires a key for all requests — get a free one at https://dev.springernature.com/.
 
 ---
 

@@ -96,6 +96,14 @@ Set `CROSSREF_MAILTO=you@example.com` to join Crossref's "polite pool" (no signu
 export CROSSREF_MAILTO=you@example.com
 ```
 
+### `search_springer` returns "SPRINGER_API_KEY is not set"
+
+Springer Nature's Meta API has no anonymous tier — every request needs a key. Get a free one at https://dev.springernature.com/ (sign up, then create a Meta API key) and export it:
+```bash
+export SPRINGER_API_KEY=...
+```
+Restart your AI tool to pick up the new env var.
+
 ### `osp` server starts but tools return errors
 
 Each tool has consistent error envelopes. Look for entries like `[{"error": "..."}]` in the AI tool's output and check:

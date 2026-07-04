@@ -126,6 +126,14 @@ if [[ -z "$SEMANTIC_SCHOLAR_API_KEY" ]]; then
   echo "     Then add to your shell profile: export SEMANTIC_SCHOLAR_API_KEY=sk-..."
 fi
 
+# Springer requires a key for all requests (no anonymous tier)
+if [[ -z "$SPRINGER_API_KEY" ]]; then
+  echo ""
+  echo -e "  ${YELLOW}ℹ️  Springer API key not set — search_springer tools will return errors until set.${NC}"
+  echo "     Get a free key at https://dev.springernature.com/"
+  echo "     Then add to your shell profile: export SPRINGER_API_KEY=..."
+fi
+
 # Create .env at project root if it doesn't exist (for API keys + tunables)
 ENV_FILE="./.env"
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -139,6 +147,10 @@ if [[ ! -f "$ENV_FILE" ]]; then
 # Semantic Scholar API key — free at https://www.semanticscholar.org/product/api
 # Without this, anonymous rate limits apply (~100 req / 5 min, bursty 429s).
 # SEMANTIC_SCHOLAR_API_KEY=sk-...
+
+# Springer Nature API key — free at https://dev.springernature.com/
+# Required for search_springer/get_springer_paper_details (no anonymous tier).
+# SPRINGER_API_KEY=...
 
 # ACM Digital Library (via Crossref) needs no key. Optionally set your email
 # to join Crossref's "polite pool" for steadier rate limits:

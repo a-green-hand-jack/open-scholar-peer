@@ -6,6 +6,7 @@ Exposes academic-search tools across these providers:
   • Semantic Scholar — citation graph, abstracts; API key recommended for higher rate limits
   • Google Scholar — broad coverage including blog posts, theses, workshop papers
   • ACM Digital Library — via Crossref (member-scoped), no API key needed
+  • Springer Nature — metadata + abstracts across articles/chapters/books; API key required
 
 Design principles:
   1. Dumb tools only — no agentic logic. Each tool is atomic, stateless.
@@ -19,6 +20,8 @@ Environment variables:
   SEMANTIC_SCHOLAR_API_KEY — optional; provides higher rate limits if set.
   CROSSREF_MAILTO          — optional; contact email for Crossref's "polite pool"
                               (steadier rate limits for ACM lookups). No key required.
+  SPRINGER_API_KEY         — required for Springer tools; free at
+                              https://dev.springernature.com/
   OSP_CALL_TIMEOUT         — per-call timeout in seconds (default: 90).
 """
 from __future__ import annotations
@@ -34,6 +37,7 @@ from providers import arxiv as arxiv_provider
 from providers import semantic_scholar as ss_provider
 from providers import google_scholar as gs_provider
 from providers import acm as acm_provider
+from providers import springer as springer_provider
 
 try:
     from dotenv import load_dotenv
@@ -510,6 +514,63 @@ async def get_acm_paper_details(doi: str) -> dict[str, Any]:
         return {"error": f"get_acm_paper_details failed: {e}"}
 
 
+# ---------- Springer Nature -------------------------------------------------
+
+@mcp.tool()
+async def search_springer(query: str, max_results: int = 10) -> list[dict[str, Any]]:
+    """Search Springer Nature for articles, book chapters, and books.
+
+    Springer Nature's Meta API covers journals, book series, and reference
+    works across science, medicine, engineering, and the humanities. Use for
+    venues and books not indexed by Semantic Scholar/arXiv (e.g. Springer
+    journals, LNCS proceedings).
+
+    Requires SPRINGER_API_KEY (free at https://dev.springernature.com/).
+
+    Args:
+        query: Free-form query, or Springer's field-qualified syntax
+            (e.g. 'keyword:"transformer" AND year:2024').
+        max_results: Number of results (1-100, default 10).
+
+    Returns:
+        List of dicts with keys: doi, title, authors, abstract,
+        publicationName, publicationDate, contentType, publisher, issn, isbn,
+        volume, startingPage, endingPage, openaccess, url.
+        Returns [{"error": "..."}] if the key is missing/invalid or the
+        request fails.
+    """
+    log.info("search_springer(query=%r, max_results=%d)", query, max_results)
+    try:
+        return await _run(springer_provider.search, query, max_results)
+    except Exception as e:
+        return [{"error": f"search_springer failed: {e}"}]
+
+
+@mcp.tool()
+async def get_springer_paper_details(doi: str) -> dict[str, Any]:
+    """Fetch a single Springer Nature record by DOI.
+
+    Use after search_springer, or when you already have a Springer DOI
+    (e.g. "10.1007/...") from a citation and want the full record.
+
+    Requires SPRINGER_API_KEY (free at https://dev.springernature.com/).
+
+    Args:
+        doi: The record's DOI, with or without the "https://doi.org/" prefix.
+
+    Returns:
+        Dict with keys: doi, title, authors, abstract, publicationName,
+        publicationDate, contentType, publisher, issn, isbn, volume,
+        startingPage, endingPage, openaccess, url.
+        Returns {"error": "..."} on failure (missing key, DOI not found).
+    """
+    log.info("get_springer_paper_details(doi=%r)", doi)
+    try:
+        return await _run(springer_provider.get_paper_details, doi)
+    except Exception as e:
+        return {"error": f"get_springer_paper_details failed: {e}"}
+
+
 # ---------- Server entrypoint ----------------------------------------------
 
 if __name__ == "__main__":
@@ -517,5 +578,7 @@ if __name__ == "__main__":
         log.info("Semantic Scholar API key detected — higher rate limits enabled.")
     else:
         log.info("No SEMANTIC_SCHOLAR_API_KEY in env — Semantic Scholar will use anonymous limits.")
+    if not os.environ.get("SPRINGER_API_KEY"):
+        log.info("No SPRINGER_API_KEY in env — Springer tools will return an error envelope until set.")
     log.info("Starting Open ScholarPeer MCP server (osp_mcp), timeout=%ds", _TIMEOUT)
     mcp.run(transport="stdio")
