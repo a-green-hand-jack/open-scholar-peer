@@ -41,7 +41,7 @@ Invoke the `osp-literature-review-agent` skill.
    - Activate the `osp-literature-review-agent` skill for that round.
    - The skill searches using **all available retrieval tools** (`search_arxiv`, `search_semantic_scholar`,
      `search_google_scholar`, `search_dblp`, `search_pubmed`, `search_biorxiv`, `search_medrxiv`, `search_wos`,
-     `search_scopus`, `search_sciencedirect`, `search_ieee_xplore`, `search_acm`, `search_springer`, native Web Search) with
+     `search_scopus`, `search_acm`, `search_springer`, `search_ieee_xplore`, `search_sciencedirect`, native Web Search) with
      **different query formulations**.
    - Write the round file (`02a`, `02b`, or `02c`) using the template at `defaults/round_strategy_template.md`.
 

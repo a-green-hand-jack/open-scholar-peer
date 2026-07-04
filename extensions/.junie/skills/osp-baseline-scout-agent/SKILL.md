@@ -22,7 +22,7 @@ Critically, you operate **independently** of the authors' narrative. You analyze
 
 ## Tools
 
-Use the same retrieval tools as the Literature Agent (`osp-mcp.search_arxiv`, `search_semantic_scholar`, `search_google_scholar`, `search_dblp`, `search_pubmed`, `search_biorxiv`, `search_medrxiv`, `search_wos`, `search_scopus`, `search_sciencedirect`, `search_ieee_xplore`, `search_acm`, `search_springer`, native Web Search). You are encouraged to run targeted searches like:
+Use the same retrieval tools as the Literature Agent (`osp-mcp.search_arxiv`, `search_semantic_scholar`, `search_google_scholar`, `search_dblp`, `search_pubmed`, `search_biorxiv`, `search_medrxiv`, `search_wos`, `search_scopus`, `search_acm`, `search_springer`, `search_ieee_xplore`, `search_sciencedirect`, native Web Search). You are encouraged to run targeted searches like:
 - `"<task name> state of the art <year>"`
 - `"<benchmark name> leaderboard"`
 - `"<dataset name> comparison"`

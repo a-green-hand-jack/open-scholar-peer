@@ -43,6 +43,22 @@ Single FastMCP server exposing academic-search tools across multiple providers.
 - `search_scopus(query, max_results=10)`
 - `get_scopus_paper_details(doi)`
 
+### ACM Digital Library (no API key needed — via Crossref)
+- `search_acm(query, max_results=10)`
+- `get_acm_paper_details(doi)`
+
+### Springer Nature (API key required)
+- `search_springer(query, max_results=10)`
+- `get_springer_paper_details(doi)`
+
+### IEEE Xplore (API key required)
+- `search_ieee_xplore(query, max_results=10)`
+- `get_ieee_xplore_paper_details(article_number_or_doi)`
+
+### ScienceDirect (API key required; abstract/full text depend on entitlement)
+- `search_sciencedirect(query, max_results=10)`
+- `get_sciencedirect_paper_details(identifier)`
+
 ## Setup
 
 The installer (`bash install.sh`) copies this server into `<your-project>/.open-scholar-peer/mcp/` and creates a Python virtualenv with all dependencies. You don't need to manage it manually.
@@ -88,6 +104,37 @@ export SCOPUS_API_KEY=...
 export SCOPUS_INST_TOKEN=...  # optional, for institutional access
 ```
 Without `SCOPUS_API_KEY`, `search_scopus` and `get_scopus_paper_details` return `{"error": "..."}`.
+
+## ACM Digital Library — no key needed
+
+`search_acm`/`get_acm_paper_details` query the free, keyless Crossref REST API scoped to ACM's Crossref member id. Optionally set `CROSSREF_MAILTO` to your email to join Crossref's "polite pool" for steadier rate limits:
+```bash
+export CROSSREF_MAILTO=you@example.com
+```
+
+## Getting a Springer Nature API key
+
+Free at: https://dev.springernature.com/ (sign up, then create a Meta API key). Set it at install time or later via env var:
+```bash
+export SPRINGER_API_KEY=...
+```
+Without a key, `search_springer`/`get_springer_paper_details` return an error envelope instead of failing the server.
+
+## Getting an IEEE Xplore API key
+
+Free at: https://developer.ieee.org/ (register, then create a Metadata API key from "My Account"). Set it at install time or later via env var:
+```bash
+export IEEE_XPLORE_API_KEY=...
+```
+Without a key, `search_ieee_xplore`/`get_ieee_xplore_paper_details` return an error envelope instead of failing the server.
+
+## Getting an Elsevier (ScienceDirect) API key
+
+Free at: https://dev.elsevier.com/ (register, then create an API key). Set it at install time or later via env var:
+```bash
+export SCIENCEDIRECT_API_KEY=...
+```
+Without a key, `search_sciencedirect`/`get_sciencedirect_paper_details` return an error envelope instead of failing the server. Note: without an institutional subscription, abstracts are often unavailable — only bibliographic metadata is guaranteed.
 
 ## Extending — adding a new provider
 

@@ -98,12 +98,12 @@ OSP currently connects to arXiv and Semantic Scholar for paper discovery and evi
 | bioRxiv | ✅ | Not Required |
 | medRxiv | ✅ | Not Required |
 | DBLP | ✅ | Not Required |
-| ACM | 🚧 Soon | Required |
-| IEEE | 🚧 Soon | Required |
+| ACM | ✅ | Not Required |
+| IEEE | ✅ | Required |
 | WoS | ✅ | Required |
 | Scopus | ✅ | Required |
-| Springer | 🚧 Soon | Required |
-| ScienceDirect | 🚧 Soon | Required |
+| Springer | ✅ | Required |
+| ScienceDirect | ✅ | Required |
 
 The literature search layers is implemented in [mcp-server/](mcp-server/), so you can extend it with additional scholarly sources when you have valid access credentials.
 
@@ -117,9 +117,18 @@ SEMANTIC_SCHOLAR_API_KEY=sk-...
 WOS_API_KEY=...
 SCOPUS_API_KEY=...
 SCOPUS_INST_TOKEN=...
+SPRINGER_API_KEY=...
+IEEE_XPLORE_API_KEY=...
+SCIENCEDIRECT_API_KEY=...
 ```
 
 Anonymous Semantic Scholar limits are tight. Get a free key at https://www.semanticscholar.org/product/api#api-key — the MCP server loads `.env` automatically on startup.
+
+Springer requires a key for all requests — get a free one at https://dev.springernature.com/.
+
+IEEE Xplore requires a key for all requests — get a free one at https://developer.ieee.org/.
+
+ScienceDirect requires a key for all requests — get a free one at https://dev.elsevier.com/. Abstract/full-text depth depends on your institution's Elsevier entitlements.
 
 ---
 

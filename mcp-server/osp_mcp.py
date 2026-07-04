@@ -2,15 +2,19 @@
 osp_mcp.py — Open ScholarPeer consolidated MCP server.
 
 Exposes academic-search tools across multiple providers:
-  • arXiv            — pre-prints, no API key needed
-  • Semantic Scholar  — citation graph, abstracts; API key recommended for higher rate limits
-  • Google Scholar    — broad coverage including blog posts, theses, workshop papers
-  • DBLP              — computer-science bibliography, no API key needed
-  • PubMed            — biomedical/life-science literature, no API key needed
-  • bioRxiv           — biology pre-prints, no API key needed
-  • medRxiv           — medical pre-prints, no API key needed
-  • Web of Science    — Clarivate citation index; API key required
-  • Scopus            — Elsevier citation index; API key required
+  • arXiv               — pre-prints, no API key needed
+  • Semantic Scholar     — citation graph, abstracts; API key recommended for higher rate limits
+  • Google Scholar       — broad coverage including blog posts, theses, workshop papers
+  • DBLP                 — computer-science bibliography, no API key needed
+  • PubMed               — biomedical/life-science literature, no API key needed
+  • bioRxiv              — biology pre-prints, no API key needed
+  • medRxiv              — medical pre-prints, no API key needed
+  • Web of Science       — Clarivate citation index; API key required
+  • Scopus               — Elsevier citation index; API key required
+  • ACM Digital Library  — via Crossref (member-scoped), no API key needed
+  • Springer Nature      — metadata + abstracts across articles/chapters/books; API key required
+  • IEEE Xplore          — journals, conference proceedings, standards; API key required
+  • ScienceDirect        — Elsevier journals/books; API key required (abstract/full text depend on entitlement)
 
 Design principles:
   1. Dumb tools only — no agentic logic. Each tool is atomic, stateless.
@@ -25,6 +29,14 @@ Environment variables:
   WOS_API_KEY              — required for Web of Science tools.
   SCOPUS_API_KEY           — required for Scopus tools.
   SCOPUS_INST_TOKEN        — optional; institutional token for full Scopus results.
+  CROSSREF_MAILTO          — optional; contact email for Crossref's "polite pool"
+                              (steadier rate limits for ACM lookups). No key required.
+  SPRINGER_API_KEY         — required for Springer tools; free at
+                              https://dev.springernature.com/
+  IEEE_XPLORE_API_KEY      — required for IEEE Xplore tools; free at
+                              https://developer.ieee.org/
+  SCIENCEDIRECT_API_KEY    — required for ScienceDirect tools; free at
+                              https://dev.elsevier.com/
   OSP_CALL_TIMEOUT         — per-call timeout in seconds (default: 90).
 """
 from __future__ import annotations
@@ -45,6 +57,10 @@ from providers import biorxiv as biorxiv_provider
 from providers import medrxiv as medrxiv_provider
 from providers import wos as wos_provider
 from providers import scopus as scopus_provider
+from providers import acm as acm_provider
+from providers import springer as springer_provider
+from providers import ieee_xplore as ieee_provider
+from providers import sciencedirect as sciencedirect_provider
 
 try:
     from dotenv import load_dotenv
@@ -775,6 +791,233 @@ async def get_scopus_paper_details(doi: str) -> dict[str, Any]:
         return {"error": f"get_scopus_paper_details failed: {e}"}
 
 
+# ---------- ACM Digital Library ---------------------------------------------
+
+@mcp.tool()
+async def search_acm(query: str, max_results: int = 10) -> list[dict[str, Any]]:
+    """Search the ACM Digital Library for computer-science papers.
+
+    ACM has no self-service public search API, so this queries the free,
+    keyless Crossref REST API scoped to ACM's Crossref member id (320) —
+    Crossref indexes every DOI ACM deposits, including proceedings, journals,
+    and transactions. Use for CS venues (SIGs, conferences like CHI/CIKM/KDD,
+    ACM journals/transactions) that Semantic Scholar or arXiv may not fully
+    index.
+
+    Args:
+        query: Free-form bibliographic query (title/author/keywords).
+        max_results: Number of results (1-100, default 10).
+
+    Returns:
+        List of dicts with keys: doi, title, authors, abstract, published,
+        venue, type, publisher, url, citationCount, page.
+        Returns [{"error": "..."}] on failure. `abstract` is often null —
+        many ACM-deposited records omit abstract text from Crossref.
+    """
+    log.info("search_acm(query=%r, max_results=%d)", query, max_results)
+    try:
+        return await _run(acm_provider.search, query, max_results)
+    except Exception as e:
+        return [{"error": f"search_acm failed: {e}"}]
+
+
+@mcp.tool()
+async def get_acm_paper_details(doi: str) -> dict[str, Any]:
+    """Fetch full Crossref metadata for a specific ACM paper by DOI.
+
+    Use after search_acm (or when you already have an ACM DOI, e.g. from a
+    citation) to get the full record.
+
+    Args:
+        doi: The paper's DOI (e.g. "10.1145/3639317"), with or without the
+            "https://doi.org/" prefix.
+
+    Returns:
+        Dict with keys: doi, title, authors, abstract, published, venue,
+        type, publisher, url, citationCount, page.
+        Returns {"error": "..."} on failure (e.g. DOI not found).
+    """
+    log.info("get_acm_paper_details(doi=%r)", doi)
+    try:
+        return await _run(acm_provider.get_paper_details, doi)
+    except Exception as e:
+        return {"error": f"get_acm_paper_details failed: {e}"}
+
+
+# ---------- Springer Nature -------------------------------------------------
+
+@mcp.tool()
+async def search_springer(query: str, max_results: int = 10) -> list[dict[str, Any]]:
+    """Search Springer Nature for articles, book chapters, and books.
+
+    Springer Nature's Meta API covers journals, book series, and reference
+    works across science, medicine, engineering, and the humanities. Use for
+    venues and books not indexed by Semantic Scholar/arXiv (e.g. Springer
+    journals, LNCS proceedings).
+
+    Requires SPRINGER_API_KEY (free at https://dev.springernature.com/).
+
+    Args:
+        query: Free-form query, or Springer's field-qualified syntax
+            (e.g. 'keyword:"transformer" AND year:2024').
+        max_results: Number of results (1-100, default 10).
+
+    Returns:
+        List of dicts with keys: doi, title, authors, abstract,
+        publicationName, publicationDate, contentType, publisher, issn, isbn,
+        volume, startingPage, endingPage, openaccess, url.
+        Returns [{"error": "..."}] if the key is missing/invalid or the
+        request fails.
+    """
+    log.info("search_springer(query=%r, max_results=%d)", query, max_results)
+    try:
+        return await _run(springer_provider.search, query, max_results)
+    except Exception as e:
+        return [{"error": f"search_springer failed: {e}"}]
+
+
+@mcp.tool()
+async def get_springer_paper_details(doi: str) -> dict[str, Any]:
+    """Fetch a single Springer Nature record by DOI.
+
+    Use after search_springer, or when you already have a Springer DOI
+    (e.g. "10.1007/...") from a citation and want the full record.
+
+    Requires SPRINGER_API_KEY (free at https://dev.springernature.com/).
+
+    Args:
+        doi: The record's DOI, with or without the "https://doi.org/" prefix.
+
+    Returns:
+        Dict with keys: doi, title, authors, abstract, publicationName,
+        publicationDate, contentType, publisher, issn, isbn, volume,
+        startingPage, endingPage, openaccess, url.
+        Returns {"error": "..."} on failure (missing key, DOI not found).
+    """
+    log.info("get_springer_paper_details(doi=%r)", doi)
+    try:
+        return await _run(springer_provider.get_paper_details, doi)
+    except Exception as e:
+        return {"error": f"get_springer_paper_details failed: {e}"}
+
+
+# ---------- IEEE Xplore ------------------------------------------------------
+
+@mcp.tool()
+async def search_ieee_xplore(query: str, max_results: int = 10) -> list[dict[str, Any]]:
+    """Search IEEE Xplore for journals, conference papers, and standards.
+
+    IEEE Xplore is the primary index for electrical engineering, electronics,
+    and computer science venues (IEEE/IET journals, IEEE conferences). Use for
+    venues not well covered by Semantic Scholar/arXiv (e.g. IEEE Transactions,
+    hardware/signal-processing conferences).
+
+    Requires IEEE_XPLORE_API_KEY (free at https://developer.ieee.org/).
+
+    Args:
+        query: Free-form query text.
+        max_results: Number of results (1-200, default 10).
+
+    Returns:
+        List of dicts with keys: articleNumber, doi, title, authors, abstract,
+        publicationTitle, publicationYear, publicationDate, contentType,
+        publisher, volume, issue, startPage, endPage, citingPaperCount,
+        htmlUrl, pdfUrl. Returns [{"error": "..."}] if the key is
+        missing/invalid or the request fails.
+    """
+    log.info("search_ieee_xplore(query=%r, max_results=%d)", query, max_results)
+    try:
+        return await _run(ieee_provider.search, query, max_results)
+    except Exception as e:
+        return [{"error": f"search_ieee_xplore failed: {e}"}]
+
+
+@mcp.tool()
+async def get_ieee_xplore_paper_details(article_number_or_doi: str) -> dict[str, Any]:
+    """Fetch a single IEEE Xplore record by article number or DOI.
+
+    Use after search_ieee_xplore, or when you already have an IEEE article
+    number (e.g. "10093112") or DOI (e.g. "10.1109/TDSC.2023.3264567") from a
+    citation and want the full record.
+
+    Requires IEEE_XPLORE_API_KEY (free at https://developer.ieee.org/).
+
+    Args:
+        article_number_or_doi: An IEEE article number, or a DOI (detected by
+            the presence of "/").
+
+    Returns:
+        Dict with keys: articleNumber, doi, title, authors, abstract,
+        publicationTitle, publicationYear, publicationDate, contentType,
+        publisher, volume, issue, startPage, endPage, citingPaperCount,
+        htmlUrl, pdfUrl. Returns {"error": "..."} on failure.
+    """
+    log.info("get_ieee_xplore_paper_details(id=%r)", article_number_or_doi)
+    try:
+        return await _run(ieee_provider.get_details, article_number_or_doi)
+    except Exception as e:
+        return {"error": f"get_ieee_xplore_paper_details failed: {e}"}
+
+
+# ---------- ScienceDirect ----------------------------------------------------
+
+@mcp.tool()
+async def search_sciencedirect(query: str, max_results: int = 10) -> list[dict[str, Any]]:
+    """Search Elsevier ScienceDirect for journal articles and book chapters.
+
+    ScienceDirect indexes Elsevier's journals and books across life sciences,
+    physical sciences, engineering, and social sciences. Use for venues not
+    well covered by Semantic Scholar/arXiv (e.g. Elsevier journals like Cell,
+    Neural Networks, Computers & Security).
+
+    Requires SCIENCEDIRECT_API_KEY (free at https://dev.elsevier.com/).
+    Without an institutional subscription, results are metadata-only
+    (abstract/full text depend on your entitlements).
+
+    Args:
+        query: Free-form query, or ScienceDirect's advanced search syntax.
+        max_results: Number of results (1-100, default 10).
+
+    Returns:
+        List of dicts with keys: doi, pii, title, authors, publicationName,
+        coverDate, startingPage, endingPage, volume, openaccess, url.
+        Returns [{"error": "..."}] if the key is missing/invalid or the
+        request fails.
+    """
+    log.info("search_sciencedirect(query=%r, max_results=%d)", query, max_results)
+    try:
+        return await _run(sciencedirect_provider.search, query, max_results)
+    except Exception as e:
+        return [{"error": f"search_sciencedirect failed: {e}"}]
+
+
+@mcp.tool()
+async def get_sciencedirect_paper_details(identifier: str) -> dict[str, Any]:
+    """Fetch full metadata (and abstract, if entitled) for one ScienceDirect article.
+
+    Use after search_sciencedirect, or when you already have a DOI, PII, or
+    EID from a citation and want the full record.
+
+    Requires SCIENCEDIRECT_API_KEY (free at https://dev.elsevier.com/).
+
+    Args:
+        identifier: A DOI (e.g. "10.1016/j.example.2024.01.001"), PII
+            (16-17 char ScienceDirect identifier), or Scopus EID
+            (e.g. "1-s2.0-...").
+
+    Returns:
+        Dict with keys: doi, eid, pii, title, authors, abstract,
+        publicationName, coverDate, aggregationType, volume, startingPage,
+        endingPage, openaccess. `abstract` may be null without an
+        institutional entitlement. Returns {"error": "..."} on failure.
+    """
+    log.info("get_sciencedirect_paper_details(identifier=%r)", identifier)
+    try:
+        return await _run(sciencedirect_provider.get_paper_details, identifier)
+    except Exception as e:
+        return {"error": f"get_sciencedirect_paper_details failed: {e}"}
+
+
 # ---------- Server entrypoint ----------------------------------------------
 
 if __name__ == "__main__":
@@ -786,5 +1029,11 @@ if __name__ == "__main__":
         log.info("No WOS_API_KEY in env — Web of Science tools will return an error envelope.")
     if not os.environ.get("SCOPUS_API_KEY"):
         log.info("No SCOPUS_API_KEY in env — Scopus tools will return an error envelope.")
+    if not os.environ.get("SPRINGER_API_KEY"):
+        log.info("No SPRINGER_API_KEY in env — Springer tools will return an error envelope until set.")
+    if not os.environ.get("IEEE_XPLORE_API_KEY"):
+        log.info("No IEEE_XPLORE_API_KEY in env — IEEE Xplore tools will return an error envelope until set.")
+    if not os.environ.get("SCIENCEDIRECT_API_KEY"):
+        log.info("No SCIENCEDIRECT_API_KEY in env — ScienceDirect tools will return an error envelope until set.")
     log.info("Starting Open ScholarPeer MCP server (osp_mcp), timeout=%ds", _TIMEOUT)
     mcp.run(transport="stdio")

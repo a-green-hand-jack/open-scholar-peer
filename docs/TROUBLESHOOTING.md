@@ -85,6 +85,41 @@ export SEMANTIC_SCHOLAR_API_KEY=sk-...
 ```
 Add to your shell profile (`~/.zshrc`, `~/.bashrc`) so it persists across sessions. Restart your AI tool to pick up the new env var.
 
+### `search_acm` results have `"abstract": null`
+
+Expected for many ACM-deposited records — `search_acm`/`get_acm_paper_details` proxy through Crossref (ACM has no public search API), and Crossref only carries abstract text when the publisher supplies it. Title, authors, DOI, venue, and citation count are still reliable. Not a bug; see `docs/KNOWN_LIMITATIONS.md` #9.
+
+### `search_acm` returns 429 or slows down under heavy use
+
+Set `CROSSREF_MAILTO=you@example.com` to join Crossref's "polite pool" (no signup, just an honesty-based contact header) for steadier rate limits:
+```bash
+export CROSSREF_MAILTO=you@example.com
+```
+
+### `search_springer` returns "SPRINGER_API_KEY is not set"
+
+Springer Nature's Meta API has no anonymous tier — every request needs a key. Get a free one at https://dev.springernature.com/ (sign up, then create a Meta API key) and export it:
+```bash
+export SPRINGER_API_KEY=...
+```
+Restart your AI tool to pick up the new env var.
+
+### `search_ieee_xplore` returns "IEEE_XPLORE_API_KEY is not set"
+
+IEEE Xplore's Metadata API has no anonymous tier — every request needs a key. Get a free one at https://developer.ieee.org/ (register, then find your key under "My Account") and export it:
+```bash
+export IEEE_XPLORE_API_KEY=...
+```
+Restart your AI tool to pick up the new env var.
+
+### `search_sciencedirect` returns "SCIENCEDIRECT_API_KEY is not set"
+
+ScienceDirect's Search API has no anonymous tier — every request needs a key. Get a free one at https://dev.elsevier.com/ (register, then create an API key) and export it:
+```bash
+export SCIENCEDIRECT_API_KEY=...
+```
+Restart your AI tool to pick up the new env var. Note that without an institutional subscription, `abstract` in `get_sciencedirect_paper_details` is frequently null — Elsevier gates full abstracts behind entitlements.
+
 ### `osp` server starts but tools return errors
 
 Each tool has consistent error envelopes. Look for entries like `[{"error": "..."}]` in the AI tool's output and check:

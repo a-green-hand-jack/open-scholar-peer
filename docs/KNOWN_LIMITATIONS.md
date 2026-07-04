@@ -117,6 +117,8 @@ mv .brain .brain.archive-$(date +%F)
 
 **Workaround:** After re-running an earlier phase, manually re-run each subsequent phase, or run `/open-scholar-peer` and follow the dispatcher's guidance.
 
+**Future:** Cascading invalidation (e.g. re-running `/1-osp-summary` resets `phases.qa` to `pending`) is on the roadmap.
+
 ---
 
 ## 9. bioRxiv keyword search is proxied through Europe PMC
@@ -129,11 +131,9 @@ mv .brain .brain.archive-$(date +%F)
 
 **Workaround:** None needed for most use cases. If you need guaranteed-fresh results, use `get_biorxiv_preprint_details` with a known DOI, or browse bioRxiv directly for very recent postings.
 
-**Future:** Cascading invalidation (e.g. re-running `/1-osp-summary` resets `phases.qa` to `pending`) is on the roadmap.
-
 ---
 
-## 9. medRxiv has no keyword-search API — results are client-side filtered
+## 10. medRxiv has no keyword-search API — results are client-side filtered
 
 **What:** The Cold Spring Harbor Laboratory API backing `osp_mcp.search_medrxiv` only exposes a chronological feed (by date range) and single-record lookup (by DOI) — there is no full-text or keyword-search endpoint.
 
@@ -145,7 +145,7 @@ mv .brain .brain.archive-$(date +%F)
 
 ---
 
-## 10. Web of Science and Scopus require paid/institutional access
+## 11. Web of Science and Scopus require paid/institutional access
 
 **What:** `osp_mcp.search_wos` and `osp_mcp.search_scopus` wrap Clarivate's and Elsevier's commercial APIs respectively.
 
@@ -154,3 +154,51 @@ mv .brain .brain.archive-$(date +%F)
 **Impact:** Without institutional access, these tools consistently return `{"error": "..."}`  or sparse results — this is expected, not a bug in OSP.
 
 **Workaround:** Use `search_arxiv`, `search_semantic_scholar`, `search_google_scholar`, and `search_medrxiv` (all free) as the primary corpus; treat WoS/Scopus as an enhancement for users with institutional access.
+
+---
+
+## 12. ACM Digital Library has no public search API — Crossref is a proxy, not a mirror
+
+**What:** ACM does not offer a self-service search API for the Digital Library. `osp_mcp.search_acm`/`get_acm_paper_details` query the free Crossref REST API filtered to ACM's Crossref member id (320), which covers every DOI ACM deposits but is metadata-only.
+
+**Limitation:** Many ACM-deposited records omit abstract text in Crossref (`abstract` is frequently `null`); full text is never available through this path. Coverage reflects what ACM chooses to deposit with Crossref, which is comprehensive but not guaranteed byte-identical to what dl.acm.org shows.
+
+**Impact:** Title/author/venue/DOI/citation-count metadata is reliable; abstract-dependent verification steps (e.g. the Answer Generator's claim cross-checking) may need to fall back to another source or the paper's own text when `abstract` is null.
+
+**Workaround:** Set `CROSSREF_MAILTO` to your email for Crossref's "polite pool" (steadier rate limits, still no key/signup required). None needed otherwise.
+
+---
+
+## 13. Springer Nature has no anonymous tier
+
+**What:** Unlike Semantic Scholar, Springer's Meta API rejects every request without a valid `api_key` — there is no reduced anonymous fallback. `osp_mcp.search_springer`/`get_springer_paper_details` return `[{"error": "..."}]` until `SPRINGER_API_KEY` is set.
+
+**Limitation:** Exact request-quota numbers depend on your Springer Nature developer account plan; check https://dev.springernature.com/ after signup for your specific limits.
+
+**Impact:** Without a key, the Literature Agent and Baseline Scout silently lose Springer as a source (falls back to arXiv/Semantic Scholar/Google Scholar/ACM), which is fine for CS-heavy papers but reduces coverage for Springer-only venues (many life-sciences and engineering journals, LNCS proceedings).
+
+**Workaround:** Get a free key at https://dev.springernature.com/ and set `SPRINGER_API_KEY`.
+
+---
+
+## 14. IEEE Xplore has no anonymous tier and a per-account request quota
+
+**What:** Like Springer, IEEE Xplore's Metadata API rejects every request without a valid `apikey`. `osp_mcp.search_ieee_xplore`/`get_ieee_xplore_paper_details` return `[{"error": "..."}]` until `IEEE_XPLORE_API_KEY` is set.
+
+**Limitation:** Free developer accounts get a limited daily/monthly call quota (check your account at https://developer.ieee.org/ for the exact number — it has changed over time and depends on account type). Heavy literature-review sessions (3 rounds × multiple queries) can burn through a small quota quickly.
+
+**Impact:** Without a key, or after exhausting quota, IEEE Xplore silently drops out as a source; the Literature Agent still has arXiv/Semantic Scholar/Google Scholar/ACM/Springer as coverage. This mainly affects electrical-engineering and hardware-adjacent CS papers.
+
+**Workaround:** Get a free key at https://developer.ieee.org/ and set `IEEE_XPLORE_API_KEY`. If you hit quota limits, space out literature-review sessions or request a higher quota from IEEE.
+
+---
+
+## 15. ScienceDirect metadata depth depends on your Elsevier entitlements
+
+**What:** `osp_mcp.search_sciencedirect`/`get_sciencedirect_paper_details` wrap the Elsevier Search API V2 and Article Retrieval API. They require `SCIENCEDIRECT_API_KEY` (no anonymous tier) but the *depth* of what comes back — abstracts in particular — depends on whether your API key is tied to a subscribing institution.
+
+**Limitation:** Without an institutional subscription, expect reliable bibliographic metadata (title, authors, DOI, venue, cover date) but `abstract` is frequently null, and full text is never available through these tools.
+
+**Impact:** Abstract-dependent verification steps (e.g. the Answer Generator's claim cross-checking) may need to fall back to another source when `abstract` is null for a ScienceDirect-only result.
+
+**Workaround:** Get a free key at https://dev.elsevier.com/ and set `SCIENCEDIRECT_API_KEY`. If your organization has an Elsevier subscription, using a key associated with it (or adding `X-ELS-Insttoken`-style institutional access, not currently wired into this provider) unlocks richer metadata.
