@@ -19,6 +19,10 @@ Single FastMCP server exposing academic-search tools across three providers.
 - `search_google_scholar_advanced(query, author=None, year_start=None, year_end=None, num_results=5)`
 - `get_google_scholar_author_info(author_name)`
 
+### ACM Digital Library (no API key needed — via Crossref)
+- `search_acm(query, max_results=10)`
+- `get_acm_paper_details(doi)`
+
 ## Setup
 
 The installer (`bash install.sh`) copies this server into `<your-project>/.open-scholar-peer/mcp/` and creates a Python virtualenv with all dependencies. You don't need to manage it manually.
@@ -46,6 +50,13 @@ Free at: https://www.semanticscholar.org/product/api#api-key. Without a key, ano
 Set it at install time or later via env var:
 ```bash
 export SEMANTIC_SCHOLAR_API_KEY=sk-...
+```
+
+## ACM Digital Library — no key needed
+
+`search_acm`/`get_acm_paper_details` query the free, keyless Crossref REST API scoped to ACM's Crossref member id. Optionally set `CROSSREF_MAILTO` to your email to join Crossref's "polite pool" for steadier rate limits:
+```bash
+export CROSSREF_MAILTO=you@example.com
 ```
 
 ## Extending — adding a new provider

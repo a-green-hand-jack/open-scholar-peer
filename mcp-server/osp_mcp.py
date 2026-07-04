@@ -1,10 +1,11 @@
 """
 osp_mcp.py — Open ScholarPeer consolidated MCP server.
 
-Exposes academic-search tools across three providers:
+Exposes academic-search tools across these providers:
   • arXiv          — pre-prints, no API key needed
   • Semantic Scholar — citation graph, abstracts; API key recommended for higher rate limits
   • Google Scholar — broad coverage including blog posts, theses, workshop papers
+  • ACM Digital Library — via Crossref (member-scoped), no API key needed
 
 Design principles:
   1. Dumb tools only — no agentic logic. Each tool is atomic, stateless.
@@ -16,6 +17,8 @@ Design principles:
 
 Environment variables:
   SEMANTIC_SCHOLAR_API_KEY — optional; provides higher rate limits if set.
+  CROSSREF_MAILTO          — optional; contact email for Crossref's "polite pool"
+                              (steadier rate limits for ACM lookups). No key required.
   OSP_CALL_TIMEOUT         — per-call timeout in seconds (default: 90).
 """
 from __future__ import annotations
@@ -30,6 +33,7 @@ from mcp.server.fastmcp import FastMCP
 from providers import arxiv as arxiv_provider
 from providers import semantic_scholar as ss_provider
 from providers import google_scholar as gs_provider
+from providers import acm as acm_provider
 
 try:
     from dotenv import load_dotenv
@@ -451,6 +455,59 @@ async def get_google_scholar_author_info(author_name: str) -> dict[str, Any]:
         return await _run(gs_provider.get_author_info, author_name)
     except Exception as e:
         return {"error": f"get_google_scholar_author_info failed: {e}"}
+
+
+# ---------- ACM Digital Library ---------------------------------------------
+
+@mcp.tool()
+async def search_acm(query: str, max_results: int = 10) -> list[dict[str, Any]]:
+    """Search the ACM Digital Library for computer-science papers.
+
+    ACM has no self-service public search API, so this queries the free,
+    keyless Crossref REST API scoped to ACM's Crossref member id (320) —
+    Crossref indexes every DOI ACM deposits, including proceedings, journals,
+    and transactions. Use for CS venues (SIGs, conferences like CHI/CIKM/KDD,
+    ACM journals/transactions) that Semantic Scholar or arXiv may not fully
+    index.
+
+    Args:
+        query: Free-form bibliographic query (title/author/keywords).
+        max_results: Number of results (1-100, default 10).
+
+    Returns:
+        List of dicts with keys: doi, title, authors, abstract, published,
+        venue, type, publisher, url, citationCount, page.
+        Returns [{"error": "..."}] on failure. `abstract` is often null —
+        many ACM-deposited records omit abstract text from Crossref.
+    """
+    log.info("search_acm(query=%r, max_results=%d)", query, max_results)
+    try:
+        return await _run(acm_provider.search, query, max_results)
+    except Exception as e:
+        return [{"error": f"search_acm failed: {e}"}]
+
+
+@mcp.tool()
+async def get_acm_paper_details(doi: str) -> dict[str, Any]:
+    """Fetch full Crossref metadata for a specific ACM paper by DOI.
+
+    Use after search_acm (or when you already have an ACM DOI, e.g. from a
+    citation) to get the full record.
+
+    Args:
+        doi: The paper's DOI (e.g. "10.1145/3639317"), with or without the
+            "https://doi.org/" prefix.
+
+    Returns:
+        Dict with keys: doi, title, authors, abstract, published, venue,
+        type, publisher, url, citationCount, page.
+        Returns {"error": "..."} on failure (e.g. DOI not found).
+    """
+    log.info("get_acm_paper_details(doi=%r)", doi)
+    try:
+        return await _run(acm_provider.get_paper_details, doi)
+    except Exception as e:
+        return {"error": f"get_acm_paper_details failed: {e}"}
 
 
 # ---------- Server entrypoint ----------------------------------------------

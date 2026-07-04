@@ -117,4 +117,16 @@ mv .brain .brain.archive-$(date +%F)
 
 **Workaround:** After re-running an earlier phase, manually re-run each subsequent phase, or run `/open-scholar-peer` and follow the dispatcher's guidance.
 
+---
+
+## 9. ACM Digital Library has no public search API — Crossref is a proxy, not a mirror
+
+**What:** ACM does not offer a self-service search API for the Digital Library. `osp_mcp.search_acm`/`get_acm_paper_details` query the free Crossref REST API filtered to ACM's Crossref member id (320), which covers every DOI ACM deposits but is metadata-only.
+
+**Limitation:** Many ACM-deposited records omit abstract text in Crossref (`abstract` is frequently `null`); full text is never available through this path. Coverage reflects what ACM chooses to deposit with Crossref, which is comprehensive but not guaranteed byte-identical to what dl.acm.org shows.
+
+**Impact:** Title/author/venue/DOI/citation-count metadata is reliable; abstract-dependent verification steps (e.g. the Answer Generator's claim cross-checking) may need to fall back to another source or the paper's own text when `abstract` is null.
+
+**Workaround:** Set `CROSSREF_MAILTO` to your email for Crossref's "polite pool" (steadier rate limits, still no key/signup required). None needed otherwise.
+
 **Future:** Cascading invalidation (e.g. re-running `/1-osp-summary` resets `phases.qa` to `pending`) is on the roadmap.

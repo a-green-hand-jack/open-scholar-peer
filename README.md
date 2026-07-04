@@ -98,7 +98,7 @@ OSP currently connects to arXiv and Semantic Scholar for paper discovery and evi
 | bioRxiv | 🚧 Soon | Not Required |
 | medRxiv | 🚧 Soon | Not Required |
 | DBLP | 🚧 Soon | Not Required |
-| ACM | 🚧 Soon | Required |
+| ACM | ✅ | Not Required |
 | IEEE | 🚧 Soon | Required |
 | WoS | 🚧 Soon | Required |
 | Scopus | 🚧 Soon | Required |

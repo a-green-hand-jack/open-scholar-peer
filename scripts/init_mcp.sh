@@ -140,6 +140,10 @@ if [[ ! -f "$ENV_FILE" ]]; then
 # Without this, anonymous rate limits apply (~100 req / 5 min, bursty 429s).
 # SEMANTIC_SCHOLAR_API_KEY=sk-...
 
+# ACM Digital Library (via Crossref) needs no key. Optionally set your email
+# to join Crossref's "polite pool" for steadier rate limits:
+# CROSSREF_MAILTO=you@example.com
+
 # --- Tunables ---------------------------------------------------------------
 
 # Per-tool-call timeout in seconds. Applies uniformly to arXiv,
