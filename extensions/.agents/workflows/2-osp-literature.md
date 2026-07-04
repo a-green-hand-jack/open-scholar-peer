@@ -42,7 +42,8 @@ Invoke the `osp-literature-review-agent` skill.
 3. Run the **next pending round only**:
    - Activate the `osp-literature-review-agent` skill for that round.
    - The skill searches using **all available retrieval tools** (`search_arxiv`, `search_semantic_scholar`,
-     `search_google_scholar`, native Web Search) with **different query formulations**.
+     `search_google_scholar`, `search_medrxiv`, `search_wos`, `search_scopus`, native Web Search) with
+     **different query formulations**.
    - Write the round file (`02a`, `02b`, or `02c`) using the template at `defaults/round_strategy_template.md`.
 
 4. Update `session.json`:

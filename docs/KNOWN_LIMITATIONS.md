@@ -118,3 +118,27 @@ mv .brain .brain.archive-$(date +%F)
 **Workaround:** After re-running an earlier phase, manually re-run each subsequent phase, or run `/open-scholar-peer` and follow the dispatcher's guidance.
 
 **Future:** Cascading invalidation (e.g. re-running `/1-osp-summary` resets `phases.qa` to `pending`) is on the roadmap.
+
+---
+
+## 9. medRxiv has no keyword-search API — results are client-side filtered
+
+**What:** The Cold Spring Harbor Laboratory API backing `osp_mcp.search_medrxiv` only exposes a chronological feed (by date range) and single-record lookup (by DOI) — there is no full-text or keyword-search endpoint.
+
+**Limitation:** `search_medrxiv` works around this by paging through the recent-postings feed (bounded by the `days_back` argument, default 365 days, capped at 20 pages / ~2000 records scanned) and filtering client-side on title/abstract. This is not a true relevance search: very old matches outside the scanned window, or papers whose title/abstract don't literally contain the query terms, will be missed.
+
+**Impact:** `search_medrxiv` may return fewer or less-relevant results than `search_arxiv`/`search_semantic_scholar` for the same query, especially for niche terms or older preprints.
+
+**Workaround:** Increase `days_back` for older literature, or fall back to native Web Search / Google Scholar for medRxiv-hosted preprints that the client-side filter misses.
+
+---
+
+## 10. Web of Science and Scopus require paid/institutional access
+
+**What:** `osp_mcp.search_wos` and `osp_mcp.search_scopus` wrap Clarivate's and Elsevier's commercial APIs respectively.
+
+**Limitation:** Both require a registered API key (`WOS_API_KEY`, `SCOPUS_API_KEY`); Web of Science additionally requires an institutional/paid Clarivate subscription behind that key, and Scopus typically returns thin or empty results unless the request originates from a subscribing institution's network or includes `SCOPUS_INST_TOKEN`.
+
+**Impact:** Without institutional access, these tools consistently return `{"error": "..."}`  or sparse results — this is expected, not a bug in OSP.
+
+**Workaround:** Use `search_arxiv`, `search_semantic_scholar`, `search_google_scholar`, and `search_medrxiv` (all free) as the primary corpus; treat WoS/Scopus as an enhancement for users with institutional access.

@@ -26,7 +26,7 @@ The Query Agent passes:
    - `01_structured_summary.md` (claims/method/evidence)
    - `03_domain_narrative.md` (relevant eras and precedents)
    - `04_missing_baselines.md` (relevant adversarial findings)
-4. **Available tools:** `osp-mcp.search_arxiv`, `search_semantic_scholar`, `search_google_scholar`, native Web Search (where applicable).
+4. **Available tools:** `osp-mcp.search_arxiv`, `search_semantic_scholar`, `search_google_scholar`, `search_medrxiv`, `search_wos`, `search_scopus`, native Web Search (where applicable).
 
 ## Verification protocol
 

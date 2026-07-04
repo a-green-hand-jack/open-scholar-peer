@@ -8,6 +8,9 @@
   - `osp-mcp.search_arxiv`
   - `osp-mcp.search_semantic_scholar`
   - `osp-mcp.search_google_scholar`
+  - `osp-mcp.search_medrxiv`
+  - `osp-mcp.search_wos`
+  - `osp-mcp.search_scopus`
   - native Web Search (where available)
 - **Query formulation rules for this round:**
   - Round 1 (sub-domain-anchor): use the paper's stated sub-domain and primary keywords; aim for the canonical 10–20 most-cited works in this area.

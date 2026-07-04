@@ -126,6 +126,22 @@ if [[ -z "$SEMANTIC_SCHOLAR_API_KEY" ]]; then
   echo "     Then add to your shell profile: export SEMANTIC_SCHOLAR_API_KEY=sk-..."
 fi
 
+# Optional: prompt for Web of Science API key (required for WoS tools to work)
+if [[ -z "$WOS_API_KEY" ]]; then
+  echo ""
+  echo -e "  ${YELLOW}ℹ️  WOS_API_KEY not set — Web of Science tools will return an error until set.${NC}"
+  echo "     Register at https://developer.clarivate.com/apis/wos-starter (institutional/paid subscription)"
+  echo "     Then add to your shell profile: export WOS_API_KEY=..."
+fi
+
+# Optional: prompt for Scopus API key (required for Scopus tools to work)
+if [[ -z "$SCOPUS_API_KEY" ]]; then
+  echo ""
+  echo -e "  ${YELLOW}ℹ️  SCOPUS_API_KEY not set — Scopus tools will return an error until set.${NC}"
+  echo "     Register a free key at https://dev.elsevier.com/ (full results need institutional access)"
+  echo "     Then add to your shell profile: export SCOPUS_API_KEY=..."
+fi
+
 # Create .env at project root if it doesn't exist (for API keys + tunables)
 ENV_FILE="./.env"
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -139,6 +155,17 @@ if [[ ! -f "$ENV_FILE" ]]; then
 # Semantic Scholar API key — free at https://www.semanticscholar.org/product/api
 # Without this, anonymous rate limits apply (~100 req / 5 min, bursty 429s).
 # SEMANTIC_SCHOLAR_API_KEY=sk-...
+
+# Web of Science API key — requires an institutional/paid Clarivate subscription.
+# Register at https://developer.clarivate.com/apis/wos-starter
+# Without this, search_wos / get_wos_paper_details return {"error": "..."}.
+# WOS_API_KEY=...
+
+# Scopus API key — free registration at https://dev.elsevier.com/
+# Full result sets typically also require an institutional network or token.
+# Without SCOPUS_API_KEY, search_scopus / get_scopus_paper_details return {"error": "..."}.
+# SCOPUS_API_KEY=...
+# SCOPUS_INST_TOKEN=...
 
 # --- Tunables ---------------------------------------------------------------
 

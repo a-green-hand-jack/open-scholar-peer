@@ -96,12 +96,12 @@ OSP currently connects to arXiv and Semantic Scholar for paper discovery and evi
 | Semantic Scholar | ✅ | Optional |
 | PubMed | 🚧 Soon | Not Required |
 | bioRxiv | 🚧 Soon | Not Required |
-| medRxiv | 🚧 Soon | Not Required |
+| medRxiv | ✅ | Not Required |
 | DBLP | 🚧 Soon | Not Required |
 | ACM | 🚧 Soon | Required |
 | IEEE | 🚧 Soon | Required |
-| WoS | 🚧 Soon | Required |
-| Scopus | 🚧 Soon | Required |
+| WoS | ✅ | Required |
+| Scopus | ✅ | Required |
 | Springer | 🚧 Soon | Required |
 | ScienceDirect | 🚧 Soon | Required |
 
@@ -114,6 +114,9 @@ The installer creates a `.env` file at your project root. Add your keys there:
 ```bash
 # .env  (gitignored — never committed)
 SEMANTIC_SCHOLAR_API_KEY=sk-...
+WOS_API_KEY=...
+SCOPUS_API_KEY=...
+SCOPUS_INST_TOKEN=...
 ```
 
 Anonymous Semantic Scholar limits are tight. Get a free key at https://www.semanticscholar.org/product/api#api-key — the MCP server loads `.env` automatically on startup.
