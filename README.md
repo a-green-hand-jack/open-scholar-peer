@@ -20,6 +20,8 @@ In CLI:
 curl -sSL https://raw.githubusercontent.com/amirkiarafiei/open-scholar-peer/main/install.sh | bash
 ```
 
+Then start using Slash Command `/open-scholar-peer`
+
 ## How it works
 
 
@@ -32,15 +34,17 @@ Given an academic paper, OSP runs a 7-step protocol to produce a venue-formatted
 
 ---
 
-| Step | Persona | What it produces |
-| --- | --- | --- |
-| 0 | Onboarding | Detects venue, scrapes review guidelines, scaffolds the working directory |
-| 1 | Summary Agent | Structured summary (claims, method, evidence) |
-| 2 | Literature Review Agent | 3-round live retrieval (sub-domain anchor, method anchor, temporal expansion) |
-| 3 | Historian Agent | Chronological domain narrative |
-| 4 | Baseline Scout | Adversarial audit of missing baselines and datasets |
-| 5 | Q&A Engine | Configurable Q&A pairs per criterion, default 2 (subagent-isolated where possible) |
-| 6 | Reviewer Agent | Final consolidated review formatted to the venue's guidelines |
+First, you can invoke `/open-scholar-peer` and it guides you towards the steps.
+
+| Step | Persona | Command | What it produces |
+| --- | --- | --- | --- |
+| 0 | Onboarding | `/0-osp-onboarding` | Detects venue, scrapes review guidelines, scaffolds the working directory |
+| 1 | Summary Agent | `/1-osp-summary` | Structured summary (claims, method, evidence) |
+| 2 | Literature Review Agent | `/2-osp-literature` | 3-round live retrieval (sub-domain anchor, method anchor, temporal expansion) |
+| 3 | Historian Agent | `/3-osp-historian` | Chronological domain narrative |
+| 4 | Baseline Scout | `/4-osp-baseline-scout` | Adversarial audit of missing baselines and datasets |
+| 5 | Q&A Engine | `/5-osp-qa` | Configurable Q&A pairs per criterion, default 2 (subagent-isolated where possible) |
+| 6 | Reviewer Agent | `/6-osp-review` | Final consolidated review formatted to the venue's guidelines |
 
 Every artifact is saved as auditable markdown in `.brain/raw/` and `.brain/review/`. No black box.
 
