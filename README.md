@@ -22,7 +22,7 @@ curl -sSL https://raw.githubusercontent.com/amirkiarafiei/open-scholar-peer/main
 
 Then start using Slash Command:
 ```bash
-`/open-scholar-peer`
+/open-scholar-peer
 ```
 
 ## How it works
