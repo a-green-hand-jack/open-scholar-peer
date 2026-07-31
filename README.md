@@ -20,7 +20,10 @@ In CLI:
 curl -sSL https://raw.githubusercontent.com/amirkiarafiei/open-scholar-peer/main/install.sh | bash
 ```
 
-Then start using Slash Command `/open-scholar-peer`
+Then start using Slash Command:
+```bash
+`/open-scholar-peer`
+```
 
 ## How it works
 
