@@ -49,6 +49,8 @@ First, you can invoke `/open-scholar-peer` and it guides you towards the steps.
 | 5 | Q&A Engine | `/5-osp-qa` | Configurable Q&A pairs per criterion, default 2 (subagent-isolated where possible) |
 | 6 | Reviewer Agent | `/6-osp-review` | Final consolidated review formatted to the venue's guidelines |
 
+### How to View Artifcats
+
 Every artifact is saved as auditable markdown in `.brain/raw/` and `.brain/review/`. No black box.
 
 ---
@@ -80,6 +82,7 @@ The installer:
 Then in your AI tool:
 
 ```text
+/open-scholar-peer        ← guides towards steps
 /0-osp-onboarding         ← venue + paper detection
 /1-osp-summary
 /2-osp-literature
