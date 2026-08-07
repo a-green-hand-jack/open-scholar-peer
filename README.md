@@ -1,6 +1,6 @@
 # Open ScholarPeer (OSP)
 
-A community implementation of [**ScholarPeer**: A Context-Aware Multi-Agent Framework for Automated Peer Review](docs/paper/scholar_peer_arxiv.pdf) — runnable inside the AI coding tools you already use.
+A community implementation of [**ScholarPeer**: A Context-Aware Multi-Agent Framework for Automated Peer Review](https://arxiv.org/abs/2601.22638) — runnable inside the AI coding tools you already use.
 
 <div align="center">
   <figure>
