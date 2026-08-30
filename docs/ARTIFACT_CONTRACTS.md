@@ -102,3 +102,14 @@ After writing its artifact, every step updates the matching `phases.<name>` bloc
 - `notes: <one-line summary of what was produced>`
 
 And updates `resume_from` to the next pending phase.
+
+## Domain-adaptive branching (`paper.review_mode`)
+
+`0-osp-onboarding.md` step 3.5 classifies the paper into `session.json.paper.review_mode` (`theoretical` / `empirical` / `other`) and `paper.field` before choosing the generic fallback guidelines. This exists because the original generic criteria (`generic_review_guidelines.md`) were derived from ML/NLP/CS conference forms and do not fit pure proof/derivation papers. Downstream artifacts branch on this field:
+
+- Step 0: generic fallback picks `generic_review_guidelines.md` (`empirical`/`other`) or `generic_review_guidelines_theoretical.md` (`theoretical`).
+- Step 1 (`01_structured_summary.md`): the third Output component is "Evidence (E)" (`empirical`/`other`) or "Formal Content" (`theoretical`) — mutually exclusive, not both.
+- Step 4 (`04_missing_baselines.md`): the table headers stay fixed, but rows describe ML baselines/datasets (`empirical`/`other`) or closest prior/competing results and unaddressed edge cases (`theoretical`).
+- Step 6 (`review/final_review.md`): criterion wording is inherited verbatim from whichever `00_review_guidelines.md` was written in step 0 — the Reviewer Agent does not re-introduce ML-specific wording for a `theoretical` paper.
+
+This branching only applies when the **generic fallback** is used. A venue-specific rubric (web-sourced or user-provided) always takes precedence over both variants.

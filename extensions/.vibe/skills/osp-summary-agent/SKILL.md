@@ -15,7 +15,7 @@ This is **not a generic abstract**. It is a *review-oriented compression* that e
 
 1. **Claims (H_core)** — the paper's core claims, stated as testable propositions.
 2. **Method (M)** — the proposed method, in enough detail that a reviewer could identify what's novel and what's borrowed.
-3. **Evidence (E)** — the reported experimental evidence: datasets, baselines, metrics, key numbers, ablations.
+3. **Evidence (E) or Formal Content** — for empirical papers, the reported experimental evidence (datasets, baselines, metrics, key numbers, ablations); for theoretical/proof papers, the formal content (lemma/theorem inventory, proof technique, prior results relied on) instead — see the `paper.review_mode` branch below. Forcing the empirical structure onto a pure proof paper produces vestigial or fabricated fields, so the two are mutually exclusive, not merged.
 
 By decoupling comprehension from critique here, downstream agents can operate on a high-fidelity signal without re-parsing the raw paper.
 
@@ -28,7 +28,9 @@ If the paper is a PDF and your environment has the `markitdown` MCP available, p
 
 ## Output
 
-Write **exactly one file**: `.brain/raw/01_structured_summary.md`. Use the universal artifact structure (Method / Output / Provenance):
+Write **exactly one file**: `.brain/raw/01_structured_summary.md`. Use the universal artifact structure (Method / Output / Provenance).
+
+The third component of the Output (below) has two mutually exclusive variants — "Evidence (E)" for empirical papers and "Formal Content" for theoretical/proof papers — selected by `session.json.paper.review_mode` (set in `0-osp-onboarding.md` step 3.5). Write only the variant that matches; do not include both.
 
 ```markdown
 # Structured Summary
@@ -52,12 +54,18 @@ Write **exactly one file**: `.brain/raw/01_structured_summary.md`. Use the unive
 - **Inputs/outputs:** <data types, expected behavior>
 - **Hyperparameters / design choices that matter for reproduction:** <list>
 
-### Evidence (E)
+### Evidence (E) — for `session.json.paper.review_mode == "empirical"` or `"other"`
 - **Datasets:** <list with size and purpose per dataset>
 - **Baselines reported:** <list — important: this is what the *authors* compared against, not what they *should have* compared against; that's the Baseline Scout's job>
 - **Metrics:** <list>
 - **Headline numbers:** <key results, with comparison to baselines>
 - **Ablations:** <what was ablated, what changed>
+
+### Formal Content — for `session.json.paper.review_mode == "theoretical"` (use this heading instead of "Evidence (E)")
+- **Lemmas / Theorems / Propositions:** <numbered inventory of each formal statement, one line each, in the order they appear>
+- **Proof technique(s):** <the core technique(s) used — e.g. compactness argument, induction, spectral decomposition, Jensen/concavity, interval arithmetic — and which result each technique proves>
+- **Prior results relied on:** <named theorems/lemmas from the literature the proof builds on, with enough specificity that the Baseline Scout can check whether the closest competing/prior results were engaged with>
+- **Numerical/computational validation (if any):** <only if the paper reports numerical experiments/certificates alongside the proof — describe the instances, what was measured, and how it relates to the formal claim; leave this bullet out entirely if the paper is a pure proof with no computational component>
 
 ## Provenance
 - Pages or sections referenced for each component (e.g. "Claims drawn from §1 and §3.1")
@@ -65,12 +73,14 @@ Write **exactly one file**: `.brain/raw/01_structured_summary.md`. Use the unive
 - Confidence flags: <e.g. "Claim 3 is implied rather than stated explicitly">
 ```
 
+Read `session.json.paper.review_mode` before writing the third component. If it is unset (e.g. an older `.brain/session.json` created before this field existed), default to the empirical "Evidence (E)" structure and note the fallback in Provenance.
+
 ## Update `session.json`
 
 After writing the artifact:
 - `phases.summary.status = "completed"`
 - `phases.summary.completed_at = <now ISO 8601 UTC>`
-- `phases.summary.notes = "<N> claims, <N> baselines, <N> datasets extracted"`
+- `phases.summary.notes = "<N> claims; <N> baselines, <N> datasets extracted (empirical)" OR "<N> claims; <N> lemmas/theorems, proof technique: <name> (theoretical)"`
 - `resume_from = "literature"`
 
 ## Pitfalls to avoid

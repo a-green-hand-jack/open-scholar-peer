@@ -16,13 +16,17 @@ This decoupling — investigation in earlier phases, reporting here — is what 
 
 ## Inputs
 
-- `.brain/session.json` (especially `venue` and `qa_criteria`)
+- `.brain/session.json` (especially `venue`, `qa_criteria`, and `paper.review_mode`)
 - `.brain/raw/00_review_guidelines.md` (venue-specific or generic fallback)
 - `.brain/raw/01_structured_summary.md`
 - `.brain/raw/02_retrieved_literature.md`
 - `.brain/raw/03_domain_narrative.md`
 - `.brain/raw/04_missing_baselines.md`
 - All `.brain/raw/05_qa_<slug>.md` files (one per active criterion)
+
+## Generic fallback criterion wording depends on `paper.review_mode`
+
+When `00_review_guidelines.md` came from the generic fallback (not venue-specific), its wording already reflects `paper.review_mode` — `generic_review_guidelines.md` for `empirical`/`other`, `generic_review_guidelines_theoretical.md` for `theoretical` (see `0-osp-onboarding.md` step 3.5 and step 4). Use whichever definitions are actually in `00_review_guidelines.md`; do not substitute the ML-centric wording ("baselines", "ablations", "datasets") into a `technical-soundness` or `reproducibility` section for a `theoretical` paper — that guidelines file already carries the correct wording ("are the proof steps correct", "can an independent expert verify the argument"). This only matters for the generic fallback; a real venue-specific rubric always wins as-is.
 
 ## Output
 
