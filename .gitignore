@@ -8,7 +8,13 @@ reviewer-os/
 # Per-project runtime artifacts (created by installers in *user* projects, never in this dev repo)
 .brain/
 .scholar-peer/
-.claude/
+# Anchored to repo root only — an unanchored `.claude/` here would also match
+# extensions/.claude/, the tracked Claude Code adapter output, and silently
+# exclude any *new* file added under it from `git add` (existing tracked files
+# stay tracked, but new ones never get added). This exact bug caused
+# extensions/.claude/defaults/generic_review_guidelines_theoretical.md to be
+# missing from every clone until this fix — see a-green-hand-jack/paper-review#6.
+/.claude/
 
 # Python
 __pycache__/
