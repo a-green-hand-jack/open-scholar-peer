@@ -153,6 +153,8 @@ These are **additions**, never replacements: the venue's own criteria always
 stay. And this list does not cap the count — a paper needing a dimension none of
 these describes should get one.
 
+## Aggregation
+
 Do **not** average. Real venues aggregate non-linearly — one journal's
 top-tier designation requires two strong endorsements but is revoked outright
 if a third report falls below the top two bands.
@@ -184,6 +186,38 @@ Rules:
 5. Report the score table **and** both axes. Never collapse them into one
    number: significance and strength of evidence are orthogonal, and a `useful`
    result can be `exceptional`ly supported.
+
+## Recommendation vocabulary
+
+The recommendation is a closed vocabulary, not free prose. One validation batch
+produced `weak accept, conditional on ...`, `Weak accept`, and `Suitable for
+dissemination as an arXiv preprint.` for three papers in the same run — three
+registers for one field, which cannot be compared or tallied.
+
+**Pick the set by whether the venue actually makes a publication decision.**
+
+**A — the venue decides.** A journal or conference with an editorial process.
+Use its own labels if `00_review_guidelines.md` supplies them; otherwise:
+
+```
+accept · weak accept · borderline · weak reject · reject
+```
+
+**B — the venue makes no decision.** A preprint server such as arXiv, where
+moderation is explicitly not peer review and nothing is accepted or rejected.
+Judging readiness is honest; issuing a verdict on the venue's behalf is not:
+
+```
+ready · ready with minor revisions · needs revision · needs major revision · not ready
+```
+
+State which set you used and why, in one clause, at the start of the
+justification — e.g. "arXiv runs no acceptance process, so this is a readiness
+judgement." Never mix the two sets, and never invent a third label.
+
+**The conditional clause attaches to either set.** With any dimension at 2 or
+below, write `<label>, conditional on <what must change>`. The label itself
+still comes from the list; `conditional on` is a suffix, not a new label.
 
 ## Confidence
 

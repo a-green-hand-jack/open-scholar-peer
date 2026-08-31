@@ -130,14 +130,22 @@ Do not fold it into Assessment, and do not rename it. Two earlier runs of the
 same version put the recommendation in two different places under two different
 labels, which makes reviews impossible to compare.
 
+**The label comes from the closed vocabulary in
+`defaults/review_vocabulary.md`** — set A when the venue makes a publication
+decision, set B when it does not (arXiv and other preprint servers). Do not
+invent a label. A later run produced `weak accept`, `Weak accept`, and
+`Suitable for dissemination as an arXiv preprint` for three papers in one batch;
+the fixed section heading alone did not prevent that.
+
 Any dimension scoring 2 or below makes this conditional: write
 `, conditional on <what must change>` and name the correction.
 
-**Justification:** <One paragraph. Only gating criteria may be cited as reasons
-the recommendation moves — but every finding at `explicit flaw` or
-`strong concern` must appear here with a traceable consequence, which means
-either the dimension score it lowered or the condition it imposed. "The
-criterion is non-gating" is not a permitted reason; see the aggregation rules.>
+**Justification:** <One paragraph, opening with which vocabulary set you used
+and why. Only gating criteria may be cited as reasons the recommendation moves —
+but every finding at `explicit flaw` or `strong concern` must appear here with a
+traceable consequence, which means either the dimension score it lowered or the
+condition it imposed. "The criterion is non-gating" is not a permitted reason;
+see the aggregation rules.>
 
 ## What was not checked
 <One or two sentences naming what remains unverified: proof steps not followed,
@@ -149,7 +157,7 @@ If `00_review_guidelines.md` specifies a different format (e.g. ICLR's specific 
 
 ## Export gate — check before writing the file
 
-Do not emit the review until all seven hold. If one fails, fix it; if it cannot
+Do not emit the review until all eight hold. If one fails, fix it; if it cannot
 be fixed from the existing artifacts, say so in the review rather than papering
 over it.
 
@@ -180,6 +188,10 @@ over it.
    2 or below, the Recommendation line carries `conditional on <...>` naming the
    correction. An unconditional positive recommendation alongside a 2 does not
    ship.
+8. **The recommendation label is from the closed vocabulary.** It is one of the
+   labels in `defaults/review_vocabulary.md` — set A or set B, whichever the
+   venue calls for — optionally suffixed with `, conditional on <...>`. A phrase
+   you composed yourself is not a label, however reasonable it reads.
 
 ## Tone calibration
 
