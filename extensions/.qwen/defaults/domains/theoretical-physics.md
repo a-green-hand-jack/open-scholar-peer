@@ -53,6 +53,60 @@ finding that a classification theorem covered only the finite case.
 | `significance` | Does the result resolve a tension, extend a framework to a new regime, or supply a needed calculation — or is it routine application of established machinery? One theory venue's only published criterion is whether scientific interest is proportional to length. | venue-set |
 | `reproducibility` | Read as **independent verifiability**: could an expert reconstruct the derivation from the steps given, and re-run any numerical component from the disclosed inputs? Not about released code alone. | `false` |
 
+### 0–5 anchors
+
+The band semantics in `../review_vocabulary.md` say what a 2 or a 4 means in
+general. These say what it means *here*. Quote the assigned band in the score
+table's third column.
+
+**`novelty`**
+`0` the result is already present in the paper's own references, or is the same calculation under different conventions ·
+`1` a re-parameterisation, or a known result restated in another limit ·
+`2` established machinery applied to an adjacent model with no new structure ·
+`3` a genuinely new relation, or a known one re-derived by a materially different technique ·
+`4` extends the framework to a regime it could not previously reach, or supplies a calculation the field had been missing ·
+`5` introduces a method or formulation likely to change how the subfield performs this class of calculation
+
+**`technical-soundness`**
+`0` a derivation step is invalid, or the result fails dimensional consistency ·
+`1` a stated limit does not reduce to the known result it is claimed to reproduce, or an approximation is applied outside any regime where it holds ·
+`2` several steps between framework and result are missing, and approximations are used with no domain of validity stated ·
+`3` the derivation holds; individual steps are compressed and some approximations' regimes are asserted rather than argued ·
+`4` complete derivation with limits checked; only secondary estimates or presentation could improve ·
+`5` every step follows from the stated framework, dimensions carry consistently throughout, and each approximation's domain of validity is established rather than assumed
+
+**`clarity`**
+`0` conventions are never declared, so the equations cannot be read unambiguously ·
+`1` metric signature, units, or normalisation change between sections without notice ·
+`2` a subfield reader must reconstruct conventions or missing intermediate steps to follow the derivation ·
+`3` followable; some symbols are used before definition and a few steps need rereading ·
+`4` conventions declared and held; only wording or equation numbering could improve ·
+`5` conventions, symbols, and equation structure make each step checkable in sequence
+
+**`significance`**
+`0` the calculation is already superseded by published work the paper does not cite ·
+`1` a narrow technical remark with no consequence beyond the specific model ·
+`2` routine application of established machinery to one more case ·
+`3` resolves a real tension, or supplies a calculation the subfield needed ·
+`4` extends a framework to a new regime others will build on ·
+`5` changes how the subfield frames the problem
+
+Length is a venue matter, not a domain one: one theory venue's only published
+criterion is whether scientific interest is proportional to length. Apply it
+only when that venue asks for it.
+
+**`reproducibility` (Independent Verifiability)**
+`0` the derivation cannot be reconstructed from what is written ·
+`1` load-bearing intermediate steps or imported results are missing, with no citation from which to recover them ·
+`2` an expert must re-derive substantial portions unaided, and any numerical component gives neither inputs nor truncation parameters ·
+`3` an expert can complete it, deriving some intermediate steps unaided; numerical inputs partially disclosed ·
+`4` derivation chain essentially complete; a few steps left implicit, numerical parameters mostly given ·
+`5` every step recoverable from the text and its citations, and any numerical component discloses inputs, truncation or lattice parameters, and convergence checks
+
+Where the paper has a computational component, `_numerical-slice.md` governs how
+its instances, precision, and independence from the analytic result bear on the
+`technical-soundness` and `reproducibility` bands.
+
 ## 04. What counts as evidence
 
 Evidence here is the derivation, plus any numerical support for it. The Summary

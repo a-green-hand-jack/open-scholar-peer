@@ -51,6 +51,56 @@ finding that a classification theorem covered only the finite case.
 | `significance` | Does the result close a known gap, strengthen a known bound, or open a new line of argument — or is it a routine specialisation of standard technique? | venue-set |
 | `reproducibility` | Read as **independent verifiability**: are enough intermediate steps, cited lemmas, and explicit constants present that an expert could reconstruct the argument? Not about released code. | `false` |
 
+### 0–5 anchors
+
+The band semantics in `../review_vocabulary.md` say what a 2 or a 4 means in
+general. These say what it means *here*. Quote the assigned band in the score
+table's third column.
+
+**`novelty`**
+`0` the result already appears in the paper's own references ·
+`1` a direct special case or restatement of a known theorem ·
+`2` a routine extension of standard technique to an adjacent setting ·
+`3` genuinely new but close to the nearest prior result, or new only in technique ·
+`4` resolves a known open problem, or materially sharpens a known bound ·
+`5` introduces a method or framework likely to change how the subfield attacks the problem
+
+**`technical-soundness`**
+`0` a definite counterexample or logical error in the proof ·
+`1` a lemma the argument depends on does not hold, or the dependency chain is circular ·
+`2` the main line is plausible but several load-bearing steps are missing and need the author to supply them ·
+`3` the argument holds; individual steps are compressed and degenerate or boundary cases go undiscussed ·
+`4` complete argument; only presentation or secondary estimates could improve ·
+`5` every step checkable by an expert from the text and its citations, with degenerate cases handled explicitly
+
+**`clarity`**
+`0` the argument cannot be followed at all as written ·
+`1` notation is inconsistent or used before definition in ways that change meaning ·
+`2` a specialist must reconstruct substantial structure to follow the proof ·
+`3` followable, with passages that need rereading and some forward references ·
+`4` clear throughout; minor wording or numbering improvements only ·
+`5` structure and notation make the argument easy to verify step by step
+
+**`significance`**
+`0` the question addressed is already settled and the paper does not say so ·
+`1` narrow technical remark with no consequence beyond itself ·
+`2` routine specialisation of standard technique ·
+`3` closes a real gap within the subfield ·
+`4` strengthens a known bound or opens a line of argument others will use ·
+`5` changes how researchers in the subfield think about the problem
+
+**`reproducibility` (Independent Verifiability)**
+`0` the argument cannot be reconstructed from what is written ·
+`1` several load-bearing constants or dependencies are missing ·
+`2` an expert must guess substantial omitted steps ·
+`3` an expert can complete it, deriving some intermediate steps unaided ·
+`4` constants and dependency chain essentially complete; a few left implicit ·
+`5` constants, dependencies, and imported results all explicit, and any computational step is given with re-runnable parameters
+
+Where the paper has a computational component, `_numerical-slice.md` governs how
+its instances, precision, and independence bear on the `technical-soundness` and
+`reproducibility` bands.
+
 ## 04. What counts as evidence
 
 Evidence in this domain is the argument itself. The Summary phase must extract

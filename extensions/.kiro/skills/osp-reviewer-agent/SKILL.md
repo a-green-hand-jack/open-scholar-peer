@@ -102,18 +102,42 @@ Write **exactly one file**: `.brain/review/final_review.md`. The structure is di
 separately and never traded against strengths. Write "None identified" if none —
 do not omit the section.>
 
+## Dimension Scores
+
+| Dimension | Score | What this band means here | Why this score | Evidence |
+|---|---|---|---|---|
+| <criterion label> | <N>/5 | <the band's wording from the profile's §03 anchors — only the band assigned> | <what in this paper puts it in that band> | <`05_qa_<slug>.md` Q<n> / `01_structured_summary.md` <field> / paper §<n>> |
+
+One row per criterion in `qa_criteria[]`, no more and no fewer. Bands come from
+`defaults/review_vocabulary.md`; the per-criterion wording comes from the
+profile's §03. A dimension you could not assess takes
+`insufficient evidence to judge` instead of a number.
+
 ## Assessment
 
 **Significance:** <landmark | fundamental | important | valuable | useful>
 **Strength of evidence:** <exceptional | compelling | convincing | solid | incomplete | inadequate>
 
-Both axes come from `defaults/review_vocabulary.md`. Report both; never collapse
-them into a single number.
+Both axes come from `defaults/review_vocabulary.md`. Report both alongside the
+score table; never collapse them into a single number.
 
-**Justification:** <One paragraph. Reference only gating criteria as reasons the
-outcome moves. Every finding you assessed at `explicit flaw` or `strong concern`
-must appear here with a traceable consequence — or an explicit statement of why
-it does not change the outcome.>
+## Recommendation
+
+**<recommendation><, conditional on ...>**
+
+This section is required, is named exactly this, and appears exactly here.
+Do not fold it into Assessment, and do not rename it. Two earlier runs of the
+same version put the recommendation in two different places under two different
+labels, which makes reviews impossible to compare.
+
+Any dimension scoring 2 or below makes this conditional: write
+`, conditional on <what must change>` and name the correction.
+
+**Justification:** <One paragraph. Only gating criteria may be cited as reasons
+the recommendation moves — but every finding at `explicit flaw` or
+`strong concern` must appear here with a traceable consequence, which means
+either the dimension score it lowered or the condition it imposed. "The
+criterion is non-gating" is not a permitted reason; see the aggregation rules.>
 
 ## What was not checked
 <One or two sentences naming what remains unverified: proof steps not followed,
@@ -121,11 +145,11 @@ claims not traced to retrieved literature, tools that were unavailable, fields
 the summary recorded as `not stated`. This replaces a numeric confidence score.>
 ```
 
-If `00_review_guidelines.md` specifies a different format (e.g. ICLR's specific scoring rubric, NeurIPS's checklist), follow that exactly — including its own scoring scale in place of the two axes above. The generic structure applies only when no venue-specific format does.
+If `00_review_guidelines.md` specifies a different format (e.g. ICLR's specific scoring rubric, NeurIPS's checklist), follow that exactly — including its own scoring scale in place of the two axes above. The generic structure applies only when no venue-specific format does. The **Dimension Scores** table is kept in either case: a venue rubric replaces the summary scales, not the per-criterion evidence.
 
 ## Export gate — check before writing the file
 
-Do not emit the review until all four hold. If one fails, fix it; if it cannot
+Do not emit the review until all seven hold. If one fails, fix it; if it cannot
 be fixed from the existing artifacts, say so in the review rather than papering
 over it.
 
@@ -137,13 +161,25 @@ over it.
    a high-severity Scout entry.
 3. **Every serious finding has a consequence.** No finding assessed at
    `explicit flaw` or `strong concern` may sit in the review without either
-   moving the assessment or carrying an explicit note on why it does not. A
-   review that flags a serious problem and then reads as favourable, with
-   nothing connecting the two, is the most common failure mode of automated
-   review and is not acceptable output.
+   lowering the score of the dimension it touches or imposing a named condition
+   on the recommendation. "The criterion is non-gating" does not count — that
+   restates a rule instead of stating a fact about the paper. A review that
+   flags a serious problem and then reads as favourable, with nothing connecting
+   the two, is the most common failure mode of automated review.
 4. **No verdict on correctness.** The review contains no statement that a proof
    is correct, a derivation valid, or an experiment sound. Such observations are
    phrased as what a human expert should check.
+5. **The score table matches the criteria.** One row per entry in
+   `qa_criteria[]`, using that entry's label. No invented dimensions, none
+   dropped.
+6. **Every score is anchored and evidenced.** Column 3 quotes the assigned
+   band's wording from the profile's §03 — not invented wording, not the whole
+   scale. Column 5 names an artifact or a paper section. A score with neither is
+   an opinion wearing a number.
+7. **Low scores make the recommendation conditional.** If any dimension scored
+   2 or below, the Recommendation line carries `conditional on <...>` naming the
+   correction. An unconditional positive recommendation alongside a 2 does not
+   ship.
 
 ## Tone calibration
 

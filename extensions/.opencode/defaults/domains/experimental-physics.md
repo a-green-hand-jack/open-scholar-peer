@@ -55,6 +55,59 @@ finding that a classification theorem covered only the finite case.
 | `significance` | Does the measurement settle a question, constrain a model, or enable new work? A venue may additionally require a discernible reason why the work deserves its visibility rather than that of a good specialist journal — that is a venue bar, not a domain one. | venue-set |
 | `reproducibility` | Are data and code available, are analysis parameters disclosed, and could the measurement be repeated from the description? Some venues require both data- and code-availability statements and take core analysis code into peer review. | `true` |
 
+### 0–5 anchors
+
+The band semantics in `../review_vocabulary.md` say what a 2 or a 4 means in
+general. These say what it means *here*. Quote the assigned band in the score
+table's third column.
+
+**`novelty`**
+`0` the measurement is superseded by published work at better precision that the paper does not cite ·
+`1` a repeat at comparable precision presented as if new ·
+`2` a repeat at comparable precision, correctly framed as confirmation ·
+`3` a meaningful precision improvement, or the same quantity in a nearby regime ·
+`4` a first observation, an order-of-magnitude precision gain, or a genuinely new regime ·
+`5` a new measurement technique that opens quantities previously inaccessible
+
+**`technical-soundness`**
+`0` a calibration, background-subtraction, or efficiency error invalidates the central value ·
+`1` statistical and systematic uncertainties are combined without separation, or the systematic budget omits a source known to dominate this class of measurement ·
+`2` uncertainties are separated but systematics are asserted without a stated estimation method; a scanned search reports only local significance with no look-elsewhere treatment ·
+`3` corrections and uncertainty treatment are sound; the systematic budget is thin in places, or selection freezing is not documented ·
+`4` complete uncertainty budget with systematics estimated by stated methods; blinding described where applicable ·
+`5` calibration, background, and efficiency all justified; statistical and systematic uncertainties separately propagated; analysis blind with the freezing point stated; global significance reported where the search scans hypotheses
+
+**`clarity`**
+`0` reported values carry no units, or figures cannot be read at all ·
+`1` error bars appear with no legend defining what they represent ·
+`2` bands, contours, or shaded regions are undefined, so a reader cannot tell a confidence interval from a spread ·
+`3` figures readable; some legends omit n or the confidence level, and a few conventions are implicit ·
+`4` every figure legend defines its error bars; only minor labelling could improve ·
+`5` units, conventions, error-bar definitions, and the meaning of every band and contour are stated where used
+
+One publisher instructs referees to comment explicitly whenever an error bar is
+left undefined — treat an undefined error bar as at most band 1.
+
+**`significance`**
+`0` the question was already settled by published work the paper does not cite ·
+`1` the measurement constrains nothing beyond itself ·
+`2` incremental tightening with no consequence for any live model ·
+`3` constrains a model under active discussion, or settles a specific question ·
+`4` rules out or strongly favours a competing explanation ·
+`5` establishes a result the subfield will build its next generation of work on
+
+A venue may additionally require a discernible reason why the work deserves its
+visibility rather than that of a good specialist journal. That is a venue bar,
+not a domain one.
+
+**`reproducibility` (Independent Verifiability)**
+`0` neither data nor analysis description is sufficient to know what was measured ·
+`1` no data- or code-availability statement where the venue requires one, and analysis parameters are absent ·
+`2` availability is asserted but the data are not actually reachable, or the disclosed parameters are insufficient to repeat the analysis ·
+`3` data reachable and the method described; some analysis parameters or simulation inputs left unstated ·
+`4` data, code, and analysis parameters disclosed; a few simulation dependencies not fully specified ·
+`5` data and analysis code available and reachable, every load-bearing simulation input identified, and the measurement repeatable from the description alone
+
 ## 04. What counts as evidence
 
 Evidence here is the measurement and its uncertainty budget. The Summary phase

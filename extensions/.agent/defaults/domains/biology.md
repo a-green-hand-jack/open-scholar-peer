@@ -50,6 +50,65 @@ finding that a classification theorem covered only the finite case.
 | `significance` | Does the finding change understanding of a mechanism, or extend it to a new context? | venue-set |
 | `reproducibility` | Read as **independent verifiability**: are reagents identified to the level of a persistent identifier, are data and analysis code accessible, are exclusion and randomization decisions disclosed? | `true` |
 
+### 0–5 anchors
+
+The band semantics in `../review_vocabulary.md` say what a 2 or a 4 means in
+general. These say what it means *here*. Quote the assigned band in the score
+table's third column.
+
+**`novelty`**
+`0` the finding is already reported in work the paper cites ·
+`1` a known mechanism observed in a new organism or system, presented as if new ·
+`2` a confirmatory result in a new system, correctly framed as confirmation ·
+`3` a new finding within an established mechanism, or a useful methodological increment ·
+`4` a new mechanism, or a finding that changes how an established one is understood ·
+`5` opens a line of investigation the subfield did not have
+
+A confirmatory result in a new system can be valuable without being novel. Say
+which it is rather than scoring value as originality.
+
+**`technical-soundness`**
+`0` the design cannot support the causal claim made, and the claim is causal ·
+`1` the reported n counts technical replicates as if independent (pseudoreplication), so the stated statistics do not apply ·
+`2` the experimental unit is not identifiable from the Methods, or the statistical test does not match the design ·
+`3` design and analysis are sound; sample size is justified only post hoc, or randomization and blinding go undescribed ·
+`4` design supports the claim, unit and n are correct, tests match; minor analytical choices unjustified ·
+`5` experimental unit explicit and n counts independent biological units, tests matched to design, randomization and blinding described, sample size justified in advance
+
+**`clarity`**
+`0` figures cannot be interpreted — no n, no error-bar definition, no test named ·
+`1` figure legends omit what error bars represent or what n is ·
+`2` the Methods cannot be followed by a competent lab without contacting the authors ·
+`3` legends complete; some Methods steps need inference from context ·
+`4` figures and Methods both followable; minor gaps in incidental detail ·
+`5` every legend states error bars, n, and test; Methods reproducible by a competent lab as written
+
+**`significance`**
+`0` the question was already settled by work the paper does not cite ·
+`1` an observation with no bearing on any mechanism under discussion ·
+`2` incremental extension of a well-established mechanism ·
+`3` changes understanding of a mechanism within the subfield ·
+`4` extends a mechanism to a context that matters beyond the subfield ·
+`5` reframes how the mechanism is understood
+
+Whether a low score here may justify rejection is venue-set, and venues differ
+sharply: one high-volume journal collects this judgement while explicitly
+declining to reject on it.
+
+**`reproducibility` (Independent Verifiability)**
+`0` neither data nor reagents are identified well enough to attempt a repeat ·
+`1` no data-availability statement, or accession numbers that do not resolve ·
+`2` key reagents carry bare catalog numbers rather than RRIDs, or cell lines are used with no STR authentication and no mycoplasma status ·
+`3` reagents and data identified; exclusion criteria or randomization decisions left undisclosed ·
+`4` RRIDs, accessions, and code all present; a few provenance details incomplete ·
+`5` reagents carry RRIDs, cell lines report source, STR authentication and mycoplasma status, data and analysis code resolve, and exclusions and randomization are disclosed as pre-specified or post hoc
+
+Where an applicable standard is triggered — ARRIVE 2.0 for animal work, MDAR or
+a journal's Life-sciences reporting set, STROBE for observational designs — a
+required item left blank, or answered "not applicable" where the standard
+forbids that, caps this dimension at band 2. Those standards require disclosure
+even when the answer is negative.
+
 **Why `significance` is never fixed here.** Two life-sciences venues can assign
 opposite consequences to the same significance judgement. At least one
 high-volume journal asks reviewers on its form how significant the results are

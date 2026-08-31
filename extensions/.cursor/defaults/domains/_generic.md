@@ -79,6 +79,63 @@ norm to calibrate against, a significance judgement here is not reliable enough
 to drive a decision. If the venue does gate on significance, follow the venue.
 | `reproducibility` | Read as **independent checkability**: is there enough detail for someone else to assess or repeat the work, by whatever standard this evidence type implies? | `false` |
 
+### 0–5 anchors
+
+The band semantics in `../review_vocabulary.md` say what a 2 or a 4 means in
+general. These say what it means *here*. Quote the assigned band in the score
+table's third column.
+
+This profile covers papers whose evidence type is not fixed in advance, so every
+band is stated **relative to the evidence type the paper itself claims** (§02).
+Establish that type first — formal derivation, experiment, observation,
+computation, qualitative study, corpus, synthesis, or position — then read the
+bands against it. Do not import the expectations of a type the paper is not.
+
+**`novelty`**
+`0` the contribution already appears in work the paper cites ·
+`1` a restatement of a known result in different vocabulary ·
+`2` a routine application of an established approach to an adjacent case ·
+`3` genuinely new, with a narrow margin over the nearest prior work ·
+`4` resolves a question the field had left open, or supplies a method others will reuse ·
+`5` changes how the question itself is posed
+
+**`technical-soundness`**
+`0` the method used cannot support the kind of claim being made — a correlational design carrying a causal conclusion, a derivation whose assumptions are violated by its own application ·
+`1` a load-bearing step fails on the paper's own terms: an assumption contradicted later, an instrument used outside its stated range ·
+`2` the approach is defensible but key justifications are absent and must come from the authors ·
+`3` method and claim strength are matched; individual inferences reach slightly past what the evidence supports ·
+`4` appropriate throughout, with minor unstated justifications ·
+`5` every claim is supported by evidence of the type the claim requires, with limits stated where the evidence stops
+
+**`clarity`**
+`0` the argument or procedure cannot be followed ·
+`1` internal inconsistency between what is described and what is reported ·
+`2` a reader in the field must reconstruct substantial structure to follow it ·
+`3` followable, with passages needing rereading ·
+`4` clear; wording and organisation improvements only ·
+`5` structure and terminology let a reader check each step in turn
+
+**`significance`**
+`0` the question is already settled and the paper does not say so ·
+`1` the result has no consequence beyond the specific case examined ·
+`2` a routine addition to an established line of work ·
+`3` closes a real gap within its area ·
+`4` matters beyond the immediate subfield ·
+`5` would change how the area approaches its central questions
+
+**`reproducibility`**
+`0` an independent party could not check the claim from what is provided ·
+`1` the materials the paper's own evidence type requires are missing — data for an empirical claim, intermediate steps for a formal one, protocol for an observational one ·
+`2` checking is possible in principle but requires guessing substantial undisclosed choices ·
+`3` a competent reader could verify with effort, supplying some details themselves ·
+`4` supporting material is essentially complete, a few items left implicit ·
+`5` everything needed to check the claim independently is disclosed and locatable
+
+Where a mandatory reporting standard applies to the paper's type (see §07), an
+absent or hollow checklist caps `reproducibility` at band 2 regardless of what
+else is provided.
+
+
 ## 04. What counts as evidence
 
 Extraction is conditional on the §02 classification. Extract the common fields

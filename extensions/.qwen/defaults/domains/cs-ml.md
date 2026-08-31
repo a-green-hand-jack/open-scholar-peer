@@ -58,6 +58,55 @@ finding that a classification theorem covered only the finite case.
 | `significance` | Would this change practice, enable new research, or shift understanding? Note that some venues separate this from soundness explicitly and treat the two as orthogonal axes. | venue-set |
 | `reproducibility` | Are code, data, hyperparameters, seeds, and compute disclosed sufficiently to re-run? Distinguish *artifact availability* from *result verification* — see §07. | `false` |
 
+### 0–5 anchors
+
+The band semantics in `../review_vocabulary.md` say what a 2 or a 4 means in
+general. These say what it means *here*. Quote the assigned band in the score
+table's third column.
+
+**`novelty`**
+`0` the contribution already exists in work the paper cites ·
+`1` a reimplementation or minor reparameterisation of a published method ·
+`2` a routine combination of known components with no new insight into why it works ·
+`3` a genuine new idea whose advance over the nearest prior method is narrow ·
+`4` a new method, analysis, or resource others will build on ·
+`5` reframes how the problem is approached, not just how well it is solved.
+Note: **absence of a comparison to the current best result is not by itself a novelty defect** — ICLR states plainly that missing SOTA is not grounds for rejection. Score the idea, not the leaderboard position.
+
+**`technical-soundness`**
+`0` the experiments cannot support the claim made — wrong task, leaked test data, or a metric that does not measure the claimed property ·
+`1` comparisons are unfair in a way that drives the result: baselines untuned while the method is tuned, or different data or budget across arms ·
+`2` single runs reported as differences with no seeds, variance, or significance treatment ·
+`3` setup supports the claim; some choices unjustified and a few conclusions reach past what was measured ·
+`4` sound design with appropriate controls; minor gaps in ablation coverage ·
+`5` claims and evidence match exactly, with variance reported and the decisive components isolated
+
+**`clarity`**
+`0` the method cannot be understood from the text ·
+`1` the described method and the reported setup contradict each other ·
+`2` reimplementation would require guessing central design decisions ·
+`3` followable; some hyperparameters and preprocessing steps left to the appendix or omitted ·
+`4` clear and complete; presentation improvements only ·
+`5` method, setup, and results are stated precisely enough to reimplement from the paper alone
+
+**`significance`**
+`0` the problem is already solved and the paper does not acknowledge it ·
+`1` improvement is within noise of existing methods ·
+`2` narrow gain on one benchmark with no evidence of transfer ·
+`3` a real advance within its subarea ·
+`4` changes what practitioners would choose for this task, or enables work that was not previously feasible ·
+`5` shifts how the community frames the problem
+
+**`reproducibility`**
+`0` no code, no data, and insufficient description to attempt a repeat ·
+`1` the required checklist is absent entirely — under NeurIPS rules that is a desk-reject condition in itself, independent of what the answers would have been ·
+`2` artifacts are promised but not in an archival repository with a DOI (a personal homepage does not satisfy ACM `Available`), or seeds, versions, and compute are undisclosed ·
+`3` code and data available and runnable, with environment details thin ·
+`4` meets ACM `Functional`: artifacts are complete, documented, and exercisable ·
+`5` meets ACM `Reusable`: artifacts are usable beyond reproducing this paper, with the distinction between *Reproduced* (using the authors' artifact) and *Replicated* (without it) respected in what the paper claims.
+Note: a checklist item answered "no" is **not** itself a defect — NeurIPS instructs reviewers not to penalise honest disclosure of limitations. Score the disclosure, not the answer.
+
+
 ## 04. What counts as evidence
 
 The Summary phase must extract these fields:

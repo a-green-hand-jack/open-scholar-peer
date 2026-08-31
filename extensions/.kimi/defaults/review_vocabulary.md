@@ -80,7 +80,78 @@ Use it whenever the paper does not contain the information needed to judge, or
 retrieval did not return work that settles the question. Do not soften it into
 `minor concern`, and do not inflate it into `concern`.
 
-## Aggregation
+## Dimension scores (0–5, one per criterion)
+
+Every criterion in `session.json.qa_criteria[]` gets a score from 0 to 5, in a
+table in the final review. The table is what makes a weakness cost something:
+prose can describe a serious problem and still read as approval, but a 2 cannot
+be written as a 4 without a reason someone can check.
+
+**Band semantics** — shared across every dimension. Each domain profile's §03
+states what the bands mean for *that* criterion in *that* field; the wording
+there wins, and this table is the frame it fills in.
+
+| Score | Meaning |
+|---|---|
+| 0 | A definite, disqualifying problem on this dimension |
+| 1 | Serious defect; needs redoing rather than patching |
+| 2 | Clearly deficient; must be revised before the work stands |
+| 3 | Adequate, with things worth improving |
+| 4 | Good; only minor blemishes |
+| 5 | Excellent; at the best standard of the field |
+
+**0 through 2 are real bands and must be used when earned.** Automated reviewers
+overestimate systematically and cluster in a narrow range, so a run whose scores
+all land in 3–5 is evidence that the anchors were not applied, not evidence that
+the papers were uniformly good.
+
+### Required table
+
+```markdown
+## Dimension Scores
+
+| Dimension | Score | What this band means here | Why this score | Evidence |
+|---|---|---|---|---|
+| Technical Soundness | 3/5 | 3 = argument holds, individual steps compressed, edge cases undiscussed | Quantifier exchange in the singular-state compactness argument is not spelled out; the Appendix B estimate cannot be checked without redoing it | `05_qa_technical-soundness.md` Q2; paper §4.3 |
+```
+
+Rules for the table:
+
+- One row per criterion in `qa_criteria[]` — no more, no fewer.
+- **Column 3 quotes only the band you assigned**, from the profile's §03 anchors.
+  Not the whole scale, and not wording you invented. Naming the band forces the
+  score to be a judgement against a written standard.
+- **Column 5 must point at an artifact** — a `05_qa_*.md` file, a field in
+  `01_structured_summary.md`, an entry in `04_missing_baselines.md`, or a
+  section of the paper. Your own recollection is not evidence.
+- A dimension you could not assess takes `insufficient evidence to judge` in
+  column 2 rather than a number, with column 4 saying what was missing.
+
+## Canonical names for recurring criteria
+
+Criteria are venue- and paper-driven, so papers legitimately add dimensions
+beyond whatever the venue lists. But three runs in one batch produced
+`completeness-scope`, `scope-and-quantification`, and `scope-and-assumptions`
+for the same underlying concern. Three names for one thing means scores cannot
+be compared across papers: there is no way to say what a corpus scored on scope
+when scope appears under three headings.
+
+**When a criterion you are adding matches one below, use that slug and label
+verbatim.** Coin a new one only when none fits — and when you do, write it as a
+lowercase hyphenated slug naming the concern, not the paper.
+
+| Slug | Label | Add it when |
+|---|---|---|
+| `scope-completeness` | Scope & Completeness | The formal result covers less than the prose claims — a classification that holds only for finite cases, a theorem stated for a special regime but described generally, an assumption doing more work than the abstract admits |
+| `numerical-validity` | Numerical Validity | The paper reports computed values supporting a formal claim, and their instance coverage, precision, or independence from the result is in question |
+| `statistical-validity` | Statistical Validity | Inference rests on statistical claims whose design, power, or multiplicity handling needs separate judgement from general soundness |
+| `reporting-compliance` | Reporting Compliance | A mandatory reporting standard applies (CONSORT, PRISMA, ARRIVE, STROBE, MDAR, checkCIF) and adherence is separately assessable |
+| `data-availability` | Data & Code Availability | The contribution is a dataset, resource, or artifact, so availability is part of the contribution rather than a reproducibility detail |
+| `ethics-compliance` | Ethics & Compliance | Human subjects, animal work, dual-use concerns, or consent and approval documentation require separate judgement |
+
+These are **additions**, never replacements: the venue's own criteria always
+stay. And this list does not cap the count — a paper needing a dimension none of
+these describes should get one.
 
 Do **not** average. Real venues aggregate non-linearly — one journal's
 top-tier designation requires two strong endorsements but is revoked outright
@@ -91,13 +162,28 @@ Rules:
 1. Any red line from the profile's §08 is a **blocker**. Blockers are reported
    separately and are never traded off against strengths.
 2. Every finding at `explicit flaw` or `strong concern` **must** have a
-   traceable consequence in the final recommendation. If the recommendation
-   does not change, state explicitly why the finding does not affect it. An
-   unexplained gap between a flagged concern and a favourable recommendation
-   is the single most common failure of automated review and is not acceptable
-   output.
-3. Report both axes. Never collapse them into one number.
-4. Non-gating criteria inform the write-up but do not move the recommendation.
+   traceable consequence. Exactly two forms are acceptable:
+   (a) it lowers the score of the dimension it touches, or
+   (b) the recommendation carries an explicit condition naming what must change.
+
+   **"This criterion is non-gating" is not a reason.** It restates a rule
+   instead of stating a fact about the paper, and it was observed being used
+   exactly that way — a review dismissed two high-severity numerical findings
+   with "they do not move the recommendation because numerical validity is
+   explicitly non-gating here". A real reason is specific: which claim the
+   finding touches, and why the central result does not depend on it.
+3. **Gating decides the recommendation; it never suppresses a score.** A
+   non-gating criterion with a serious problem still scores 1 or 2. What gating
+   controls is whether that score can pull the recommendation down — not
+   whether the reader gets to see it.
+4. **Any dimension scoring 2 or below makes the recommendation conditional**,
+   whether or not the criterion gates. Write
+   `<recommendation>, conditional on <what must change>` and name the
+   correction. An unconditional positive recommendation alongside a 2 is not
+   acceptable output.
+5. Report the score table **and** both axes. Never collapse them into one
+   number: significance and strength of evidence are orthogonal, and a `useful`
+   result can be `exceptional`ly supported.
 
 ## Confidence
 

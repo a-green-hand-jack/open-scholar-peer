@@ -147,10 +147,20 @@ numerical-validity criterion for a computational claim, a data-availability
 criterion for a resource paper. A criterion with no row in §03 is perfectly
 valid; instantiate it by reading the profile's §04 and §06.
 
+**Name added criteria from the canonical list.** `defaults/review_vocabulary.md`
+carries slugs and labels for the criteria that recur across papers. If the
+criterion you are adding matches one, use that slug and label verbatim; coin a
+new one only when none fits. One batch produced `completeness-scope`,
+`scope-and-quantification`, and `scope-and-assumptions` for the same concern,
+which makes scores incomparable across papers — the concern is real each time,
+but three names for it means a corpus can never be summarised on that dimension.
+
 Do not normalise every paper in a field onto the same five slugs. A measured
 case: a fixed five-criterion list dropped a completeness criterion, and with it
 a correct finding that a classification theorem covered only the finite-outcome
-case. The adaptive list had caught it; the fixed list did not.
+case. The adaptive list had caught it; the fixed list did not. Reusing a
+canonical *name* is not the same as reusing a fixed *list* — take the name when
+it fits, and still add the criterion only when the paper earns it.
 
 If the venue uses 7 criteria, you produce 7 entries. If 3, you produce 3, plus
 any the paper itself demands. The number is venue- and paper-driven, not fixed.

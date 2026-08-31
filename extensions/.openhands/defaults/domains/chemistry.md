@@ -58,6 +58,59 @@ characterization completeness as a threshold rather than a quality gradient — 
 compound whose identity is not established has not been made, however
 interesting the claim.
 
+### 0–5 anchors
+
+The band semantics in `../review_vocabulary.md` say what a 2 or a 4 means in
+general. These say what it means *here*. Quote the assigned band in the score
+table's third column.
+
+This field has unusually hard criteria — checkCIF alert levels, which methods
+can and cannot establish purity, machine-readable coordinates. Those belong in
+the low bands, because they are decidable rather than matters of taste.
+
+**`novelty`**
+`0` the compound or transformation already appears in the paper's own cited literature ·
+`1` a published transformation applied to an adjacent substrate, with no new selectivity or mechanistic insight ·
+`2` routine substrate-scope extension of a published method ·
+`3` genuinely new, but close to a published route and with modest advantage over it ·
+`4` reaches a transformation, structure, or property prior routes could not, or improves access materially ·
+`5` opens a class of reactivity or structure type others will build on
+
+**`technical-soundness`**
+`0` the reported data contradict the assigned structure ·
+`1` a mechanistic claim rests on no control at all (`control_experiments: none`), or the computational method is inappropriate to the system studied ·
+`2` the identity/purity/yield triple is incomplete for a compound claimed as new, or the basis set is inadequate for the system ·
+`3` data support the assigned structures; some mechanistic claims rest on controls weaker than the claim needs ·
+`4` complete characterization with discriminating controls; secondary mechanistic claims could use more support ·
+`5` every mechanistic claim discriminated against alternatives by control, and the computational treatment matched to the system
+
+**`clarity`**
+`0` compound numbering cannot be reconciled between the main text and the SI ·
+`1` characterized compounds appear in one document but not the other ·
+`2` schemes must be reconstructed to follow the route, or numbering drifts between sections ·
+`3` followable; some schemes crowded, a few cross-references need chasing ·
+`4` legible schemes and consistent numbering throughout ·
+`5` every compound traceable at a glance across text, SI, and spectra
+
+**`significance`**
+`0` the transformation or structure is already routinely accessible by the cited methods ·
+`1` a single compound or result with no consequence beyond itself ·
+`2` incremental improvement in yield or conditions over an established route ·
+`3` materially improves access to a useful class of compounds or properties ·
+`4` enables work that was previously impractical ·
+`5` establishes a method or structural class that redirects effort in the area
+
+**`reproducibility`**
+`0` the procedure cannot be repeated from the SI — steps, reagents, or stoichiometry missing ·
+`1` purity rests on HRMS alone, which cannot establish purity, or coordinates are supplied only as an SI table or PDF ·
+`2` checkCIF A- or B-level alerts unresolved and carrying no written justification; or R factor above 0.15 without explanation; or software version, method, or basis set absent ·
+`3` procedure repeatable and spectra reproduced; secondary parameters such as k-point mesh or solvation keywords left implicit ·
+`4` complete SI with machine-readable coordinates, CCDC number, and stated computational keywords ·
+`5` spectra reproduced for every new compound, checkCIF clean or fully justified, coordinates machine-readable, computational setup completely specified
+
+Where medicinal-chemistry claims are made, purity below the 95% convention
+belongs in band `1`–`2` regardless of the method used to measure it.
+
 ## 04. What counts as evidence
 
 Evidence here is characterization data plus the procedures that generated it.

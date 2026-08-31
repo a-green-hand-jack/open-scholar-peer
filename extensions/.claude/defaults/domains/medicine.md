@@ -52,6 +52,64 @@ finding that a classification theorem covered only the finite case.
 | `significance` | Is the effect clinically meaningful, not merely statistically detectable? Would it change practice, guidelines, or standard of care? | venue-set |
 | `reproducibility` | Read as **independent verifiability**: are the protocol and statistical analysis plan obtainable, is the registration consistent with what was reported, is individual-level data sharing addressed? | `true` |
 
+### 0–5 anchors
+
+The band semantics in `../review_vocabulary.md` say what a 2 or a 4 means in
+general. These say what it means *here*. Quote the assigned band in the score
+table's third column.
+
+**`novelty`**
+`0` the question is already settled by trials or syntheses the paper does not cite ·
+`1` a redundant replication that does not acknowledge the existing evidence base ·
+`2` a replication of an important result, correctly framed as replication ·
+`3` addresses a question the existing evidence leaves genuinely open ·
+`4` answers a question current guidelines mark as uncertain ·
+`5` addresses a question no adequately powered study has approached
+
+Replication of an important result is a contribution. Say so rather than scoring
+it as unoriginal — this criterion defaults to non-gating for that reason.
+
+**`technical-soundness`**
+`0` the design cannot support the causal claim made — an effect of treatment asserted from an uncontrolled before-after comparison, for instance ·
+`1` the primary outcome reported differs from the registered one with no explanation, or the analysis is not the pre-specified one and the deviation is undisclosed ·
+`2` confounding is not addressed for the causal claim made, or causal language exceeds what an observational design supports ·
+`3` design and analysis appropriate; missing-data handling or a secondary analysis choice is unjustified ·
+`4` design answers the question, outcomes analysed as registered, confounding addressed; minor analytical gaps ·
+`5` design matched to the question, outcomes pre-specified and analysed as registered, confounding addressed by stated methods, missing data handled appropriately, causal language proportionate to the design
+
+**`clarity`**
+`0` the conclusions cannot be traced to any reported result ·
+`1` conclusions restate the hypothesis rather than the findings ·
+`2` effect estimates reported without dispersion, or the abstract's numbers disagree with the results tables ·
+`3` results traceable; the abstract is unstructured, or only relative effects are given where absolute ones matter ·
+`4` structured abstract, estimates with intervals, conclusions matched to results; minor presentation gaps ·
+`5` structured abstract, every estimate with its interval and both absolute and relative effects where relevant, conclusions proportionate to what was found
+
+**`significance`**
+`0` the effect claimed is already known not to hold ·
+`1` a statistically detectable effect with no plausible clinical meaning ·
+`2` an effect too small or too narrow to bear on practice ·
+`3` clinically meaningful within a defined population ·
+`4` would inform a guideline or change a standard of care ·
+`5` changes practice across a broad population
+
+Statistical detectability is not clinical meaning. Score the latter.
+
+**`reproducibility` (Independent Verifiability)**
+`0` no registration and no protocol, so what was planned cannot be established ·
+`1` a registration identifier is absent where the venue requires it, or the registration postdates enrolment ·
+`2` registered outcomes and reported outcomes differ with no explanation, or neither protocol nor statistical analysis plan is obtainable ·
+`3` registration and protocol available; the analysis plan or the data-sharing arrangement is not ·
+`4` registration, protocol, and analysis plan all obtainable; individual-level data sharing addressed but limited ·
+`5` registration consistent with what was reported, protocol and statistical analysis plan obtainable, deviations declared, individual-level data sharing addressed explicitly
+
+The applicable reporting standard is triggered by design, not by field: CONSORT
+2025 for trials (CONSORT-AI where an AI intervention is involved), SPIRIT 2025
+for protocols, PRISMA 2020 with PRISMA-S for syntheses, PRISMA-ScR for scoping
+reviews, STROBE for observational studies, STARD for diagnostic accuracy, TRIPOD
+for prediction models, CARE for case reports. A required checklist absent, or
+present with load-bearing items unanswered, caps this dimension at band 2.
+
 Clinical review conventionally separates methodological and statistical
 assessment. Where the venue supplies a distinct statistics criterion, treat it
 as gating regardless of this table.
