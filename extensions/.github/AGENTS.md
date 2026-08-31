@@ -86,3 +86,23 @@ missing inputs.
 A batch run that dies at a prompt is indistinguishable in the manifest from a
 model that failed the task: opencode exits 0, no `final_review.md` appears, and
 the run is recorded as `failed` with `returncode: 0`. That has happened.
+
+## Scratch files stay inside the workspace
+
+Reviewing a PDF often means rendering a page to look at a figure, or writing an
+intermediate file. **Write every such file under `.brain/tmp/`**, inside the
+project directory. Create it if absent.
+
+Do not write to `/tmp`, `~/tmp`, or any other location outside the project. A
+harness running unattended cannot grant permission for an external directory,
+so the call is auto-rejected — and that is not recoverable: the run aborts with
+"The user rejected permission to use this specific tool call", produces no
+review, and still exits 0.
+
+This has cost two benchmark papers. The first fix allowlisted the one scratch
+path that had been observed; the next run picked a different one. Allowlisting
+cannot keep up with a freely chosen path, so the rule is on the writer instead:
+stay inside the workspace, where permission is never in question.
+
+`.brain/tmp/` is working scratch, not an artifact. Nothing there is part of the
+review record, and it does not need to be preserved.
