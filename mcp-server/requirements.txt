@@ -1,5 +1,10 @@
-mcp>=1.2.0
-fastmcp>=0.2.0
+# mcp 2.x renamed FastMCP to MCPServer and changed other APIs, so `mcp>=1.2.0`
+# silently resolves to a release that breaks osp_mcp.py at import:
+#   ModuleNotFoundError: No module named 'mcp.server.fastmcp'
+# Every fresh install after the 2.0 release hit this. Pin until osp_mcp.py is
+# migrated to the 2.x API.
+mcp>=1.2.0,<2
+fastmcp>=0.2.0,<2
 semanticscholar>=0.7.0
 scholarly>=1.7.11
 requests>=2.31.0
