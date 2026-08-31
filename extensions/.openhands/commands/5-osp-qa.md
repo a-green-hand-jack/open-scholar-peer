@@ -39,8 +39,15 @@ Invoke the `osp-query-agent` skill (main thread). The Query Agent will spawn `os
    ```
 
 4. Ask the user: "How many Q&A pairs per criterion? Press Enter for [N] or type a number (2–10):"
+
+   **Do not block on this.** If `qa_pairs_per_criterion` is already set in
+   `session.json`, or no answer arrives, proceed immediately with N and record
+   the default in `phases.qa.notes`. A batch run has nobody to press Enter, and
+   waiting there ends the run with no review and an exit code of 0 — which in
+   the manifest is indistinguishable from the model failing the task. See
+   "Unattended runs" in the OSP rules.
 5. If the user enters a number, update `session.json.qa_pairs_per_criterion` to that value and use it.
-   If the user presses Enter, use the existing value.
+   If the user presses Enter, or no answer arrives, use the existing value.
 
 ## Mode selection
 
