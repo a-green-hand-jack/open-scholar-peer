@@ -1,0 +1,160 @@
+# Domain Profile — Mathematics
+
+## 01. Front matter
+
+```yaml
+domain: math
+aliases: [mathematics, pure-math, math-logic, combinatorics, number-theory,
+          analysis, topology, algebra, probability-theory]
+version: 1
+last_verified: 2026-08-30
+```
+
+## 02. Detection cues
+
+- arXiv primary category under `math.*`, or `cs.DM` / `cs.CC` with theorem-proof structure
+- An MSC classification number
+- Section headings of the form "Proof of Theorem 1", "Lemma", "Corollary", "Preliminaries"
+- No "Experimental Section", no dataset table, no reported runtime
+- References dominated by mathematics journals and arXiv `math.*` preprints
+
+**Hybrid:** if the paper proves a result *and* reports computational search,
+numerical verification, or machine-checked cases, also read
+`_numerical-slice.md`. Papers resolving finite cases by computer search are
+common in combinatorics and number theory and are frequently misfiled as purely
+theoretical, losing every reported quantity.
+
+## 03. Criterion instantiation
+
+How this domain reads the criteria the venue supplied. `gating` is the
+**default** only — a venue's own gating always wins.
+
+| Criterion slug | What it means here | Default gating |
+|---|---|---|
+| `novelty` | Is the result, or the proof strategy, new relative to the literature? Resolving an open problem, sharpening a known bound, or giving a materially different argument for a known result all qualify. A cited-but-unnoticed equivalent result is the main risk. | `true` |
+| `technical-soundness` | Are definitions precise, are hypotheses complete and actually used, does each step follow, are degenerate and boundary cases handled rather than assumed away? | `true` |
+| `clarity` | Can a competent reader in the subfield follow each step from the text and its citations alone, without reconstructing omitted steps? Is notation defined before use and used consistently? | `false` |
+| `significance` | Does the result close a known gap, strengthen a known bound, or open a new line of argument — or is it a routine specialisation of standard technique? | venue-set |
+| `reproducibility` | Read as **independent verifiability**: are enough intermediate steps, cited lemmas, and explicit constants present that an expert could reconstruct the argument? Not about released code. | `false` |
+
+## 04. What counts as evidence
+
+Evidence in this domain is the argument itself. The Summary phase must extract
+these fields; each becomes a row the later phases can cite:
+
+| Field | Content |
+|---|---|
+| `main_results` | Each theorem/proposition as stated, with its number |
+| `hypotheses` | The standing assumptions of each main result, verbatim where short |
+| `lemma_chain` | Which lemmas each main result depends on, including imported results |
+| `proof_technique` | The named strategy (induction, probabilistic method, compactness, generating functions, …) |
+| `prior_results_used` | External theorems invoked, with citation, and *what they are used for* |
+| `explicit_constants` | Any constant, bound, or exponent the paper claims, with its scope of validity |
+| `computational_component` | Present / absent. If present, `_numerical-slice.md` also applies |
+
+Record a field as **not stated** when the paper does not supply it. Never
+substitute a plausible value.
+
+## 05. Nearest prior work
+
+The Scout phase hunts for the **closest competing or superseding results**, not
+for baselines. Specifically:
+
+- A theorem that already implies the paper's main result, in whole or as a special case
+- A sharper bound, or the same bound under weaker hypotheses
+- The same statement proved by a different technique, which may reduce the novelty claim to the technique alone
+- A known counterexample bounding how far the result can extend
+- Prior work the authors cite for a technique but not for a result that subsumes theirs
+
+Frame every finding as "this result appears to be implied by / sharpened by /
+already proved in X" with the citation, or as a question when retrieval is
+inconclusive. **Never** report a "missing baseline" or a "missing dataset".
+
+## 06. Verifiability checks
+
+| Check | Tier |
+|---|---|
+| Every numbered theorem/lemma referenced in a proof exists in the paper | automatic |
+| No lemma's proof depends on a result stated later without forward reference | automatic |
+| Every external theorem invoked has a citation | automatic |
+| Constants and exponents used downstream match where they were introduced | semi-automatic |
+| Hypotheses of a cited theorem are actually satisfied where it is applied | manual |
+| Each proof step follows from the stated assumptions | manual |
+| Degenerate and boundary cases are handled | manual |
+
+Only `automatic` findings may be stated as fact. `semi-automatic` findings are
+stated as "appears inconsistent — please confirm". `manual` findings enter the
+verification agenda as questions and are **never** reported as verdicts.
+
+## 07. Reporting standards
+
+**No mandatory reporting standard exists for this domain.** No formal-verification
+policy was found at any major mathematics publisher checked; machine-checked
+proofs remain a voluntary supplement. Applicable conventions are limited to
+arXiv category fit, an MSC number, and AI-use disclosure.
+
+If the paper *does* ship a formalization (Lean, Coq, Isabelle), treat it as a
+strength to verify, not a requirement whose absence is a weakness.
+
+## 08. Red lines
+
+Boolean blockers. Reported separately; never traded against strengths.
+
+- A main result is stated without proof and without citation to where it is proved
+- A cited result is misstated in a way that changes what it yields
+- The same result is claimed as new when the paper's own references contain it
+- A computational step is load-bearing but neither code nor certificate is available
+- Plagiarism, duplicate submission, or undisclosed overlap with the authors' prior work
+
+## 09. Anti-patterns — never generate these
+
+The failure mode this profile exists to prevent is asking machine-learning
+questions of a proof. Each row is a question class that must not be produced.
+
+| Never ask | Ask instead |
+|---|---|
+| "What baselines were compared against?" | "Which prior theorem is closest, and does it already imply this one?" |
+| "Were ablations performed?" | "Which hypotheses are load-bearing — does the result survive dropping each?" |
+| "Which datasets were used?" | "Which worked examples or special cases are checked, and are they representative?" |
+| "Are hyperparameters disclosed?" | "Are the constants explicit, and is their range of validity stated?" |
+| "Is the code released?" | "Are the omitted steps recoverable by an expert from what is written?" |
+| "Would this generalize to another dataset or larger scale?" | "Does the argument extend to weaker hypotheses, or is there a known obstruction?" |
+| "How does this compare to state of the art?" | "Is this the sharpest known bound, and under which hypotheses?" |
+| "Is the improvement statistically significant?" | "Is the improvement in the bound asymptotic, constant-factor, or in the hypotheses?" |
+
+Do not merely rephrase a forbidden question in domain vocabulary. If a question
+has no meaningful form here, drop it and use the criterion's remaining budget
+on a different angle.
+
+## 10. Seed questions
+
+- `technical-soundness` — "Theorem N assumes H. Where in the proof is H used, and does the argument survive its removal?" (look in the proof body)
+- `technical-soundness` — "Does the argument cover the degenerate case where [parameter] vanishes, or is it implicitly excluded?" (look in the statement's hypotheses)
+- `novelty` — "Reference [X] proves a related bound. Is this result stronger, or a restatement under different notation?" (look in the introduction and related work)
+- `reproducibility` — "Step S is asserted as immediate. Can it be reconstructed from the cited results alone?" (look in the proof body)
+- `clarity` — "Symbol σ appears in Lemma 3 before its definition in §4. Is this a forward reference or an inconsistency?" (look across sections)
+
+## 11. Output vocabulary
+
+Use `../review_vocabulary.md` unchanged. Strength of evidence rates **the
+argument**, not experiments: `convincing` means the proof is complete and
+checkable as written, not that measurements were adequate.
+
+Domain-specific constraint: the *"never claim a proof is correct"* rule in that
+file applies with full force here. Report what a referee should check and why
+each step is load-bearing.
+
+## 12. Provenance
+
+| Claim | Source | Retrieved |
+|---|---|---|
+| Correctness as an ethical obligation of editors and referees | AMS Ethical Guidelines, §on publication | 2026-08-30 |
+| Unchecked portions must be declared in the report | Notices of the AMS, "How to Referee" (signed article, community practice, not policy) | 2026-08-30 |
+| Two mandatory referee scales | SIAM Instructions for Referees | 2026-08-30 |
+| Moderation is explicitly not peer review | arXiv moderation and endorsement policy pages | 2026-08-30 |
+| No formal-verification policy at major publishers | Absence across AMS, Annals, SIAM, LMS, Springer pages retrieved | 2026-08-30 |
+
+**Not established from a primary source:** Annals of Mathematics publishes no
+review criteria at all; the criterion instantiation in §03 is therefore derived
+from the AMS/SIAM/Notices sources above plus general practice, not from a
+top-venue rubric. Treat §03 gating defaults as conventions, not as policy.

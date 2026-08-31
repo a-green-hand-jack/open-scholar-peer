@@ -16,7 +16,9 @@ This decoupling — investigation in earlier phases, reporting here — is what 
 
 ## Inputs
 
-- `.brain/session.json` (especially `venue`, `qa_criteria`, and `paper.review_mode`)
+- `.brain/session.json` (especially `venue`, `qa_criteria` including each entry's `gating`, `paper.domain_profile`, `paper.numerical_slice`)
+- `defaults/review_vocabulary.md` — the two assessment axes and the aggregation rules. Read this every review.
+- The domain profile named by `paper.domain_profile` — **§08 red lines** and **§11 vocabulary deviations**
 - `.brain/raw/00_review_guidelines.md` (venue-specific or generic fallback)
 - `.brain/raw/01_structured_summary.md`
 - `.brain/raw/02_retrieved_literature.md`
@@ -24,9 +26,34 @@ This decoupling — investigation in earlier phases, reporting here — is what 
 - `.brain/raw/04_missing_baselines.md`
 - All `.brain/raw/05_qa_<slug>.md` files (one per active criterion)
 
-## Generic fallback criterion wording depends on `paper.review_mode`
+## Venue and domain are separate layers
 
-When `00_review_guidelines.md` came from the generic fallback (not venue-specific), its wording already reflects `paper.review_mode` — `generic_review_guidelines.md` for `empirical`/`other`, `generic_review_guidelines_theoretical.md` for `theoretical` (see `0-osp-onboarding.md` step 3.5 and step 4). Use whichever definitions are actually in `00_review_guidelines.md`; do not substitute the ML-centric wording ("baselines", "ablations", "datasets") into a `technical-soundness` or `reproducibility` section for a `theoretical` paper — that guidelines file already carries the correct wording ("are the proof steps correct", "can an independent expert verify the argument"). This only matters for the generic fallback; a real venue-specific rubric always wins as-is.
+The venue decides **which criteria exist, the output format, and which criteria
+gate the decision**. The domain profile decides **what counted as evidence, what
+"nearest prior work" meant, and which red lines apply**. Both are already
+reflected in the artifacts you are reading; your job is to respect each layer
+where it applies rather than re-deriving either.
+
+Concretely: use the criterion definitions as they appear in
+`00_review_guidelines.md`. Do not reintroduce ML-centric wording — "baselines",
+"ablations", "datasets" — into a `technical-soundness` or `reproducibility`
+section for a paper whose profile defines those criteria differently. The
+guidelines file already carries the right wording; substituting your own defeats
+the whole layering.
+
+## Gating: a criterion only moves the decision if it is marked to
+
+Each entry in `session.json.qa_criteria[]` carries a `gating` boolean. A
+criterion with `gating: false` **informs the write-up but does not move the
+recommendation**. Say what is weak about it, and do not lower the outcome for it.
+
+This is not a nicety. The same criterion gates at one venue and explicitly does
+not at another — some journals collect a significance judgement while refusing
+to reject on it. Inferring gating from the discipline instead of the venue
+introduces a systematic bias across every paper in that field.
+
+If `gating_source` is `"unset"`, treat the criterion as non-gating and say so in
+the justification.
 
 ## Output
 
@@ -70,18 +97,53 @@ Write **exactly one file**: `.brain/review/final_review.md`. The structure is di
 2. <...>
 3. <3-5 questions total>
 
-## Decision recommendation
-<Accept / Weak Accept / Borderline / Weak Reject / Reject>
+## Red lines
+<Any §08 blocker from the domain profile that the artifacts support. Reported
+separately and never traded against strengths. Write "None identified" if none —
+do not omit the section.>
 
-**Justification:** <One paragraph grounding the decision in the strengths/weaknesses above.>
+## Assessment
 
-## Confidence
-<1-5 scale>
+**Significance:** <landmark | fundamental | important | valuable | useful>
+**Strength of evidence:** <exceptional | compelling | convincing | solid | incomplete | inadequate>
 
-**Rationale:** <One sentence on confidence, e.g. "Confidence 4: domain narrative was well-covered but reproducibility claims could not be fully verified without code access.">
+Both axes come from `defaults/review_vocabulary.md`. Report both; never collapse
+them into a single number.
+
+**Justification:** <One paragraph. Reference only gating criteria as reasons the
+outcome moves. Every finding you assessed at `explicit flaw` or `strong concern`
+must appear here with a traceable consequence — or an explicit statement of why
+it does not change the outcome.>
+
+## What was not checked
+<One or two sentences naming what remains unverified: proof steps not followed,
+claims not traced to retrieved literature, tools that were unavailable, fields
+the summary recorded as `not stated`. This replaces a numeric confidence score.>
 ```
 
-If `00_review_guidelines.md` specifies a different format (e.g. ICLR's specific scoring rubric, NeurIPS's checklist), follow that exactly. The generic fallback above is only used when no venue-specific format applies.
+If `00_review_guidelines.md` specifies a different format (e.g. ICLR's specific scoring rubric, NeurIPS's checklist), follow that exactly — including its own scoring scale in place of the two axes above. The generic structure applies only when no venue-specific format does.
+
+## Export gate — check before writing the file
+
+Do not emit the review until all four hold. If one fails, fix it; if it cannot
+be fixed from the existing artifacts, say so in the review rather than papering
+over it.
+
+1. **Every citation resolves.** Each cited work appears in
+   `02_retrieved_literature.md`. A reference you cannot point to a line for does
+   not go in the file.
+2. **Every weakness is anchored.** Each bullet under Weaknesses names the
+   artifact it came from — a `[DISCREPANCY]` flag, a `05_qa_<slug>.md` pair, or
+   a high-severity Scout entry.
+3. **Every serious finding has a consequence.** No finding assessed at
+   `explicit flaw` or `strong concern` may sit in the review without either
+   moving the assessment or carrying an explicit note on why it does not. A
+   review that flags a serious problem and then reads as favourable, with
+   nothing connecting the two, is the most common failure mode of automated
+   review and is not acceptable output.
+4. **No verdict on correctness.** The review contains no statement that a proof
+   is correct, a derivation valid, or an experiment sound. Such observations are
+   phrased as what a human expert should check.
 
 ## Tone calibration
 
@@ -94,10 +156,10 @@ If `00_review_guidelines.md` specifies a different format (e.g. ICLR's specific 
 After writing:
 - `phases.review.status = "completed"`
 - `phases.review.completed_at = <now>`
-- `phases.review.notes = "Final review written; decision: <recommendation>"`
+- `phases.review.notes = "Final review written; significance: <level>; evidence: <level>; <N> red lines"`
 - `resume_from = "completed"`
 
-Print a short confirmation to the user with the path to the final review and any noteworthy `[DISCREPANCY]` flags or high-severity baselines that drove the recommendation.
+Print a short confirmation to the user with the path to the final review, both assessment axes, and any red lines or high-severity findings that drove them.
 
 ## Pitfalls
 
@@ -105,3 +167,6 @@ Print a short confirmation to the user with the path to the final review and any
 - Do **not** invent citations — every cited paper must trace back to `02_retrieved_literature.md`.
 - Do **not** soften high-severity findings. The Baseline Scout's job was to be adversarial; your job is to fairly report what it found.
 - Do **not** use boilerplate language. Reviewers can tell.
+- Do **not** lower the assessment for a non-gating criterion. Report the weakness, leave the outcome alone.
+- Do **not** emit a numeric confidence score. State what was not checked instead — automated reviewers report near-constant high confidence that bears no relationship to their actual error rate, so the number carries no information.
+- Do **not** treat `insufficient evidence to judge` findings as neutral filler. They mark where the paper is silent, and that is reportable.

@@ -16,7 +16,9 @@ You operate **in the main thread**. The Answer Generator Agent runs as a **subag
 
 ## Inputs
 
-- `.brain/session.json` — especially `qa_criteria[]` and `qa_pairs_per_criterion`
+- `.brain/session.json` — especially `qa_criteria[]`, `qa_pairs_per_criterion`, `paper.domain_profile`, `paper.numerical_slice`
+- The domain profile named by `paper.domain_profile`, from `defaults/domains/` — **read §09 and §10 before generating any question**
+- `defaults/domains/_numerical-slice.md` — only if `paper.numerical_slice` is `true`
 - `.brain/raw/00_review_guidelines.md`
 - `.brain/raw/01_structured_summary.md`
 - `.brain/raw/03_domain_narrative.md`
@@ -45,14 +47,43 @@ After all criteria are done:
 
 ## Question generation principles
 
+**The domain profile's §09 anti-pattern list is binding.** Read it before
+writing a single question, and check every question you generate against it.
+This is the highest-leverage step in the whole phase: OSP's default question
+frame was derived from ML conference review forms, and applying it unchanged to
+a proof, a synthesis, or a clinical trial produces questions the paper cannot
+answer because they were never about this kind of work.
+
+Rejecting a forbidden question is not enough. Each §09 row supplies the
+replacement that belongs in its place — use it. If a question class has no
+meaningful form in this domain, **drop it and spend that question on a
+different angle**; do not rephrase a forbidden question in domain vocabulary
+and call it adapted.
+
 Per criterion, the N questions must collectively probe:
+
 - **Claims** — does each claim hold under scrutiny?
-- **Comparisons** — are the right baselines present, are they fair, are improvements significant?
-- **Generalization** — would the result hold on a different dataset or scale?
-- **Reproducibility** — if you wanted to reproduce, what's missing?
+- **Evidence** — as the domain profile's §04 defines evidence for this field.
+  In a proof paper this is the argument; in a synthesis paper it is identity,
+  purity, and yield; in a trial it is design, population, and outcomes.
+- **Nearest prior work** — as the profile's §05 defines it. For most domains
+  this means the closest competing or superseding *result*, not a baseline.
+- **Verifiability** — as the profile's §06 defines it, respecting its
+  automatic / semi-automatic / manual tiering.
 - **Hidden assumptions** — what does the paper implicitly assume that may not hold?
 
-Avoid generic questions. "Is this novel?" is bad. "Is the claim that this method outperforms X at scale Y consistent with [specific paper from `03_domain_narrative.md`]?" is good.
+If `paper.numerical_slice` is `true`, the overlay licenses an additional class
+of question about the computational portion — representativeness of the
+instance set, sufficiency of working precision, and above all whether the
+computation is independent of the result it validates. Those questions apply to
+the computation only, never to the proof.
+
+Ground every question in a specific artifact. "Is this novel?" is bad. "Theorem
+3 assumes H; where in the proof is H used, and does the argument survive its
+removal?" is good, because an answer can be found or shown to be absent.
+
+Seed questions in the profile's §10 are starting points, not a quota. Adapt them
+to this paper's actual content.
 
 ## Subagent delegation (default mode)
 
@@ -95,3 +126,10 @@ This is a **known weaker substitute** for true subagent isolation — see `KNOWN
 - Do **not** answer your own questions in the main thread — always delegate (subagent) or use turn markers (self-reflection).
 - Do **not** rephrase the same question N ways. Each question must target a distinct weakness or angle.
 - Do **not** silently skip a criterion. If you can't proceed due to missing prior artifacts, raise an error.
+- Do **not** generate a question the domain profile's §09 forbids, and do not
+  launder one past the list by translating its vocabulary. "Which datasets were
+  used?" and "on which corpus of instances was this evaluated?" are the same
+  forbidden question asked twice.
+- Do **not** treat "the paper does not say" as a failed question. An answer of
+  `insufficient evidence to judge` on a well-targeted question is a finding, and
+  a more useful one than a padded answer. Keep the pair.

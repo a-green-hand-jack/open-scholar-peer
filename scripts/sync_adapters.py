@@ -320,8 +320,29 @@ def iter_shared_skills() -> Iterable[Path]:
 
 
 def iter_shared_defaults() -> Iterable[Path]:
+    """Every file under defaults/, at any depth.
+
+    Recursive on purpose: `defaults/domains/` holds the per-discipline review
+    profiles. A non-recursive glob here would silently drop them from all 14
+    adapters with no error and no failing test — the same silent-drop class of
+    bug that previously cost us a full benchmark run.
+    """
     d = SHARED / "defaults"
-    return sorted(d.glob("*.md")) if d.exists() else []
+    return sorted(p for p in d.rglob("*.md") if p.is_file()) if d.exists() else []
+
+
+def iter_shared_skill_support_files(skill_dir: Path) -> Iterable[Path]:
+    """Supporting files bundled next to a skill's SKILL.md (references/, etc.).
+
+    Anthropic's Agent Skills guidance keeps SKILL.md under 500 lines and moves
+    detailed reference material into sibling files loaded only when the skill
+    body points at them. Those files have to reach every adapter, so they are
+    enumerated and copied alongside SKILL.md.
+    """
+    return sorted(
+        p for p in skill_dir.rglob("*")
+        if p.is_file() and p.name != "SKILL.md"
+    )
 
 
 def sync_tool(tool: ToolCaps) -> list[str]:
@@ -351,6 +372,12 @@ def sync_tool(tool: ToolCaps) -> list[str]:
         target_dir = tool.root / tool.skill_dir
         write_skill(target_dir, skill_name, skill_path.read_text(encoding="utf-8"))
         written.append(str((target_dir / skill_name / "SKILL.md").relative_to(tool.root)))
+        # Supporting files bundled with the skill (references/, assets/, ...)
+        for support in iter_shared_skill_support_files(skill_path.parent):
+            support_target = target_dir / skill_name / support.relative_to(skill_path.parent)
+            support_target.parent.mkdir(parents=True, exist_ok=True)
+            support_target.write_bytes(support.read_bytes())
+            written.append(str(support_target.relative_to(tool.root)))
 
     # Rules
     rules_src = SHARED / "rules" / "osp-rules.md"
@@ -372,11 +399,14 @@ def sync_tool(tool: ToolCaps) -> list[str]:
                 target.write_text(body, encoding="utf-8")
                 written.append(str(target.relative_to(tool.root)))
 
-    # Defaults — copy verbatim into a `defaults/` folder under each tool root
+    # Defaults — copy verbatim into a `defaults/` folder under each tool root,
+    # preserving subdirectory structure (defaults/domains/<field>.md).
     defaults_target = tool.root / "defaults"
     defaults_target.mkdir(parents=True, exist_ok=True)
+    defaults_src = SHARED / "defaults"
     for d in iter_shared_defaults():
-        target = defaults_target / d.name
+        target = defaults_target / d.relative_to(defaults_src)
+        target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(d.read_text(encoding="utf-8"), encoding="utf-8")
         written.append(str(target.relative_to(tool.root)))
 

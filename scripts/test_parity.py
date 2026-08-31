@@ -73,12 +73,35 @@ def list_canonical_skills() -> list[str]:
     return sorted(p.parent.name for p in (SHARED / "skills").glob("*/SKILL.md"))
 
 
+def list_canonical_skill_support() -> list[tuple[str, str]]:
+    """(skill_name, relative_path) for every non-SKILL.md file bundled with a skill."""
+    out: list[tuple[str, str]] = []
+    for skill_md in (SHARED / "skills").glob("*/SKILL.md"):
+        skill_dir = skill_md.parent
+        for p in skill_dir.rglob("*"):
+            if p.is_file() and p.name != "SKILL.md":
+                out.append((skill_dir.name, p.relative_to(skill_dir).as_posix()))
+    return sorted(out)
+
+
 def list_canonical_defaults() -> list[str]:
+    """Relative POSIX paths of every defaults file, at any depth.
+
+    Deliberately recursive. This function used to be a non-recursive
+    `glob("*.md")` — the exact same enumeration the sync script used — so when
+    the sync silently dropped files under `defaults/domains/`, the expected set
+    did not contain them either and this test still passed. An expectation
+    derived from the same faulty assumption as the code under test cannot catch
+    that code's bug. Walk the tree here, always.
+    """
     d = SHARED / "defaults"
-    return sorted(p.name for p in d.glob("*.md")) if d.exists() else []
+    if not d.exists():
+        return []
+    return sorted(p.relative_to(d).as_posix() for p in d.rglob("*.md") if p.is_file())
 
 
-def check_tool(tool: ToolSpec, commands: list[str], skills: list[str], defaults: list[str]) -> list[str]:
+def check_tool(tool: ToolSpec, commands: list[str], skills: list[str], defaults: list[str],
+               skill_support: list[tuple[str, str]] | None = None) -> list[str]:
     issues: list[str] = []
     if not tool.root.exists():
         issues.append(f"[{tool.name}] adapter root missing: {tool.root.relative_to(REPO_ROOT)}")
@@ -96,17 +119,34 @@ def check_tool(tool: ToolSpec, commands: list[str], skills: list[str], defaults:
         if not target.exists():
             issues.append(f"[{tool.name}] missing skill: {target.relative_to(REPO_ROOT)}")
 
+    # Skill supporting files (references/, assets/, ...)
+    for skill_name, rel in (skill_support or []):
+        target = tool.root / tool.skill_dir / skill_name / rel
+        if not target.exists():
+            issues.append(f"[{tool.name}] missing skill support file: {target.relative_to(REPO_ROOT)}")
+
     # Rules
     for rel in tool.rule_paths:
         target = tool.root / rel
         if not target.exists():
             issues.append(f"[{tool.name}] missing rules artifact: {target.relative_to(REPO_ROOT)}")
 
-    # Defaults (every tool gets the full set under defaults/)
+    # Defaults (every tool gets the full set under defaults/, subdirectories included)
     for d in defaults:
         target = tool.root / "defaults" / d
         if not target.exists():
             issues.append(f"[{tool.name}] missing default: {target.relative_to(REPO_ROOT)}")
+
+    # Reverse check: an adapter must not carry a defaults file that no longer
+    # exists in _shared. Catches stale artifacts left behind by a rename.
+    adapter_defaults = tool.root / "defaults"
+    if adapter_defaults.exists():
+        expected = set(defaults)
+        for p in adapter_defaults.rglob("*.md"):
+            if p.is_file():
+                rel = p.relative_to(adapter_defaults).as_posix()
+                if rel not in expected:
+                    issues.append(f"[{tool.name}] stale default not in _shared: {p.relative_to(REPO_ROOT)}")
 
     return issues
 
@@ -119,16 +159,18 @@ def main() -> int:
     commands = list_canonical_commands()
     skills = list_canonical_skills()
     defaults = list_canonical_defaults()
+    skill_support = list_canonical_skill_support()
 
     if not commands or not skills:
         print("ERROR: _shared/ is empty (no commands or skills found).", file=sys.stderr)
         return 2
 
-    print(f"  ▸ canonical: {len(commands)} commands, {len(skills)} skills, {len(defaults)} defaults")
+    print(f"  ▸ canonical: {len(commands)} commands, {len(skills)} skills, "
+          f"{len(defaults)} defaults, {len(skill_support)} skill support files")
 
     all_issues: list[str] = []
     for tool in TOOLS:
-        issues = check_tool(tool, commands, skills, defaults)
+        issues = check_tool(tool, commands, skills, defaults, skill_support)
         if issues:
             all_issues.extend(issues)
         else:

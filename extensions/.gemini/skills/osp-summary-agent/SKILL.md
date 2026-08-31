@@ -15,13 +15,42 @@ This is **not a generic abstract**. It is a *review-oriented compression* that e
 
 1. **Claims (H_core)** — the paper's core claims, stated as testable propositions.
 2. **Method (M)** — the proposed method, in enough detail that a reviewer could identify what's novel and what's borrowed.
-3. **Evidence (E) or Formal Content** — for empirical papers, the reported experimental evidence (datasets, baselines, metrics, key numbers, ablations); for theoretical/proof papers, the formal content (lemma/theorem inventory, proof technique, prior results relied on) instead — see the `paper.review_mode` branch below. Forcing the empirical structure onto a pure proof paper produces vestigial or fabricated fields, so the two are mutually exclusive, not merged.
+3. **Evidence** — whatever the paper's own discipline counts as evidence. The field set is **not fixed**: it is supplied by the domain profile's §04, because "evidence" means measurements in an experimental paper, an argument in a proof, and identity/purity/yield in a synthesis paper.
 
 By decoupling comprehension from critique here, downstream agents can operate on a high-fidelity signal without re-parsing the raw paper.
 
+## The extraction contract is what carries domain adaptation
+
+The evidence section is **defined by a contract, not by prose framing**. Read
+`paper.domain_profile` from `session.json`, open that profile, and use its §04
+table as the literal field list for the evidence section. One row, one field.
+
+This matters more than it looks. An earlier version of this skill swapped the
+section *heading* between an empirical and a theoretical variant and declared
+them "mutually exclusive, not merged". A benchmark paper that proved a result
+and validated it numerically was classified theoretical, so the empirical
+section disappeared — and with it went 3 of the 5 headline numbers the paper
+plainly reported, because the theoretical variant had **no field in which a
+number could live**. Every later phase then worked from a summary that had
+silently dropped them.
+
+The lesson: **rewording a section cannot preserve a value that no field
+captures.** Fields, not headings, are what carry information forward.
+
+If `paper.numerical_slice` is `true`, also read
+`defaults/domains/_numerical-slice.md` and **add** its fields to the profile's
+§04 set. Add, never substitute — a hybrid paper fills both sets, and dropping
+either one is the regression above, repeated.
+
+If `paper.domain_profile` is unset (an older `.brain/session.json` predating
+this field), fall back to `defaults/domains/_generic.md` and record the fallback
+in Provenance.
+
 ## Inputs
 
-- `.brain/session.json` (read for venue, paper path)
+- `.brain/session.json` (read for venue, paper path, `paper.domain_profile`, `paper.numerical_slice`)
+- The domain profile named by `paper.domain_profile`, from `defaults/domains/` — **§04 is the field list for the evidence section**
+- `defaults/domains/_numerical-slice.md` — only if `paper.numerical_slice` is `true`; its fields are **added** to §04's
 - `.brain/input/paper.{pdf,md,...}` — the actual manuscript
 
 If the paper is a PDF and your environment has the `markitdown` MCP available, prefer the parsed `.md` version when present (`.brain/input/paper.md`). If only PDF is present, parse it with `markitdown` and save to `.brain/input/paper.md` as a side effect.
@@ -30,7 +59,9 @@ If the paper is a PDF and your environment has the `markitdown` MCP available, p
 
 Write **exactly one file**: `.brain/raw/01_structured_summary.md`. Use the universal artifact structure (Method / Output / Provenance).
 
-The third component of the Output (below) has two mutually exclusive variants — "Evidence (E)" for empirical papers and "Formal Content" for theoretical/proof papers — selected by `session.json.paper.review_mode` (set in `0-osp-onboarding.md` step 3.5). Write only the variant that matches; do not include both.
+The evidence section's fields come from the domain profile's §04, plus the
+numerical-slice overlay when it applies. The skeleton below shows the fixed
+parts; the `### Evidence` field list is filled from the profile.
 
 ```markdown
 # Structured Summary
@@ -38,6 +69,7 @@ The third component of the Output (below) has two mutually exclusive variants �
 ## Method
 - **Source:** `<paper path>`
 - **Parsing:** <markitdown | native | manual>
+- **Domain profile:** `<name>` <+ numerical-slice overlay, if applied>
 - **Sections traversed:** abstract, introduction, methods, experiments, conclusion, appendix-as-needed
 - **Compression strategy:** review-oriented (claims/method/evidence triple), not generic abstract
 
@@ -52,35 +84,32 @@ The third component of the Output (below) has two mutually exclusive variants �
 - **Problem framing:** <one paragraph>
 - **Approach:** <2-3 paragraphs covering the core technique, key components, what's novel vs borrowed>
 - **Inputs/outputs:** <data types, expected behavior>
-- **Hyperparameters / design choices that matter for reproduction:** <list>
+- **Design choices that matter for independent verification:** <list>
 
-### Evidence (E) — for `session.json.paper.review_mode == "empirical"` or `"other"`
-- **Datasets:** <list with size and purpose per dataset>
-- **Baselines reported:** <list — important: this is what the *authors* compared against, not what they *should have* compared against; that's the Baseline Scout's job>
-- **Metrics:** <list>
-- **Headline numbers:** <key results, with comparison to baselines>
-- **Ablations:** <what was ablated, what changed>
+### Evidence
+<One bullet per row of the domain profile's §04 table, in that table's order,
+using its field names verbatim. If the numerical-slice overlay applies, append
+its fields after the profile's own.
 
-### Formal Content — for `session.json.paper.review_mode == "theoretical"` (use this heading instead of "Evidence (E)")
-- **Lemmas / Theorems / Propositions:** <numbered inventory of each formal statement, one line each, in the order they appear>
-- **Proof technique(s):** <the core technique(s) used — e.g. compactness argument, induction, spectral decomposition, Jensen/concavity, interval arithmetic — and which result each technique proves>
-- **Prior results relied on:** <named theorems/lemmas from the literature the proof builds on, with enough specificity that the Baseline Scout can check whether the closest competing/prior results were engaged with>
-- **Numerical/computational validation (if any):** <only if the paper reports numerical experiments/certificates alongside the proof — describe the instances, what was measured, and how it relates to the formal claim; leave this bullet out entirely if the paper is a pure proof with no computational component>
+Write `not stated` for any field the paper does not supply. A field recorded as
+`not stated` is a finding available to every later phase; a field silently
+omitted is information destroyed. Never invent a plausible value, and never drop
+a row because it looked empty.>
 
 ## Provenance
 - Pages or sections referenced for each component (e.g. "Claims drawn from §1 and §3.1")
 - Quotes for any verbatim claim attribution
+- Domain profile used, and whether the numerical-slice overlay was applied
 - Confidence flags: <e.g. "Claim 3 is implied rather than stated explicitly">
+- Any field recorded as `not stated`, listed together so later phases can see the gaps at a glance
 ```
-
-Read `session.json.paper.review_mode` before writing the third component. If it is unset (e.g. an older `.brain/session.json` created before this field existed), default to the empirical "Evidence (E)" structure and note the fallback in Provenance.
 
 ## Update `session.json`
 
 After writing the artifact:
 - `phases.summary.status = "completed"`
 - `phases.summary.completed_at = <now ISO 8601 UTC>`
-- `phases.summary.notes = "<N> claims; <N> baselines, <N> datasets extracted (empirical)" OR "<N> claims; <N> lemmas/theorems, proof technique: <name> (theoretical)"`
+- `phases.summary.notes = "<N> claims; evidence extracted per <profile> profile<, + numerical slice>; <N> fields recorded as not stated"`
 - `resume_from = "literature"`
 
 ## Pitfalls to avoid
@@ -88,3 +117,5 @@ After writing the artifact:
 - Do **not** evaluate or critique. That's Q&A's job. Just extract and structure.
 - Do **not** add literature or context the paper doesn't mention. The Summary Agent is purely internal-facing.
 - Do **not** truncate. If the paper has 7 claims, list all 7 — context capacity for downstream is measured in tokens but accuracy gains here saturate at full extraction.
+- Do **not** drop a §04 field because this paper does not fill it. `not stated` is the correct entry, and the gap is itself review-relevant.
+- Do **not** substitute the overlay's fields for the profile's on a hybrid paper. Both sets are written. This is the exact substitution that lost the headline numbers.

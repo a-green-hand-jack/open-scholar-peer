@@ -37,16 +37,51 @@ Invoke the `osp-orchestrator` skill (no domain persona needed for this step).
 - If the paper appears to list a venue, show what you found and ask the user to confirm or correct it: "The paper mentions [venue]. Is that the submission venue you want to review against, or a different one?"
 - Save `venue.name` and `venue.year` to `session.json`.
 
-### 3.5. Identify the paper's review mode and field
+### 3.5. Select the domain profile
 
-OSP's default criteria were originally derived from ML/NLP/CS conference review forms. Many papers reviewed with OSP are not empirical ML papers — they may be pure mathematical proofs, theoretical physics derivations, or other non-experimental work. Applying baseline/dataset/ablation-style criteria to a proof paper produces forced, low-value output. Detect this **before** picking the generic fallback guidelines.
+OSP's default criteria were derived from ML/NLP/CS conference review forms. Most
+papers reviewed with OSP are not empirical ML papers, and asking a proof paper
+about baselines and datasets produces forced, low-value output. The **domain
+profile** supplies the discipline-specific half of the review.
 
-- Read the paper (title, abstract, and structure already visible from locating it in step 2) and classify:
-  - `paper.review_mode`: one of `theoretical` (the core contribution is a proof, derivation, or formal result — even if it includes some numerical/computational validation of that result), `empirical` (the core contribution is measured via experiments, datasets, benchmarks, or ablations), or `other` (neither fits — e.g. a survey, a dataset-release paper, a position paper).
-  - `paper.field`: a short free-text label for the discipline (e.g. `math`, `physics`, `cs-ml`, `biology`, `chemistry`). Best-effort; do not block on this.
-- This is a judgment call, not an interactive question — infer it from the paper itself. If genuinely ambiguous (e.g. a theory paper with a substantial empirical section), prefer `empirical` only if the empirical results are the paper's primary claim; otherwise use `theoretical`.
-- Save `paper.review_mode` and `paper.field` to `session.json`.
-- This classification only changes which **generic fallback** guidelines get used in step 4, and how the Summary, Baseline Scout, and Reviewer personas frame their output later. It has no effect when a venue-specific or user-provided guideline is available — venue instructions always take precedence.
+Venue and domain are **orthogonal layers, and both always apply**:
+
+| Layer | Decides |
+|---|---|
+| Venue (steps 4–6) | which criteria exist, the rubric, the output format, and which criteria gate the decision |
+| Domain (this step) | what counts as evidence, what "nearest prior work" means, which verifiability checks apply, which questions must never be asked |
+
+A venue rubric never removes a domain's anti-pattern list. A domain profile
+never overrides a venue's criteria or gating.
+
+Steps:
+
+1. Read `defaults/domains/_index.md` (or its synced equivalent in your tool's
+   `defaults/` directory) for the routing table.
+2. From the paper's title, abstract, structure, and reference list, pick
+   **exactly one** profile. Route on the paper's *method of justification*, not
+   its subject matter — a paper proving a theorem about a biological network is
+   `math`, not `biology`.
+3. Read that one profile file. Do not read the others.
+4. **Hybrid check.** If the paper's core claim is formal *and* it reports
+   computed values, a computational search, simulation output, or any claim of
+   agreement between an analytic and a computed result, **also** read
+   `defaults/domains/_numerical-slice.md`. One reported number is enough to
+   trigger this. Do not choose between the two files — read both.
+5. Also set `paper.review_mode` to `theoretical`, `empirical`, or `other`. This
+   remains in the schema because step 4's generic fallback branches on it; the
+   profile, not this flag, now carries the domain behaviour.
+
+Save to `session.json`:
+
+- `paper.domain_profile` — the profile filename without extension (e.g. `math`)
+- `paper.numerical_slice` — `true` if the overlay was read, else `false`
+- `paper.field` — the free-text discipline label, usually the same as the profile name
+- `paper.review_mode` — as above
+
+This is a judgement call, not an interactive question. If genuinely ambiguous,
+prefer the profile whose §02 detection cues match more of the paper's actual
+structure, and say which cues decided it in the phase notes.
 
 ### 4. Retrieve venue review guidelines (fallback chain)
 
@@ -74,9 +109,33 @@ Parse the guidelines to extract the evaluation criteria. Each criterion becomes 
 {
   "slug": "novelty",
   "label": "Novelty & Originality",
-  "definition": "<one-paragraph definition from the guidelines>"
+  "definition": "<one-paragraph definition from the guidelines>",
+  "gating": true,
+  "gating_source": "venue"
 }
 ```
+
+`gating` records whether a poor score on this criterion may on its own justify
+rejection. **Without this field the pipeline conflates "worth asking about" with
+"worth penalising."** The distinction is real and venue-specific: some journals
+collect a significance judgement on their review form while explicitly refusing
+to reject on it, while others treat "why does this not belong in a good
+specialist journal instead" as a hard bar. The same rating implies opposite
+outcomes at those two venues.
+
+Set `gating` in this order of precedence:
+
+1. **The venue says so** — the review form marks a criterion as a rejection
+   ground, or explicitly says it is not one. Set `gating_source` to `"venue"`.
+2. **The domain profile's §03 default** — its criterion instantiation table
+   carries a default for each slug. Set `gating_source` to `"domain-default"`.
+3. **Unknown** — set `gating` to `false` and `gating_source` to `"unset"`. A
+   criterion that cannot be shown to gate does not gate.
+
+`significance` is the criterion this matters most for. Its default in every
+domain profile is `venue-set` precisely because it must not be inferred from the
+discipline — doing so introduces a systematic bias across every paper in that
+field.
 
 If the venue uses 7 criteria, you produce 7 entries. If 3, you produce 3. The number is venue-driven, not fixed.
 
@@ -92,7 +151,7 @@ This is a **structural nudge**: when the Query Agent runs in Phase 5, the empty 
 
 - `phases.onboarding.status = "completed"`
 - `phases.onboarding.completed_at = <now ISO 8601 UTC>`
-- `phases.onboarding.notes = "Venue: <name>; review mode: <theoretical|empirical|other>; field: <field>; criteria: <N>; paper: <path>; guidelines source: <web|user|generic>"`
+- `phases.onboarding.notes = "Venue: <name>; domain profile: <name><+numerical-slice if applied>; review mode: <theoretical|empirical|other>; criteria: <N> (<G> gating); paper: <path>; guidelines source: <web|user|generic>"`
 - `resume_from = "summary"`
 
 ### 9. User-facing report
@@ -100,8 +159,9 @@ This is a **structural nudge**: when the Query Agent runs in Phase 5, the empty 
 Print:
 ```
 ── Onboarding complete ───────────────────────────────────
-Venue: <name>  |  Criteria: <N>  |  Guidelines: <web|user|generic>
-Review mode: <theoretical|empirical|other>  |  Field: <field>
+Venue: <name>  |  Criteria: <N> (<G> gating)  |  Guidelines: <web|user|generic>
+Domain profile: <name><, + numerical-slice overlay>
+Review mode: <theoretical|empirical|other>
 Paper located and text-version confirmed.
 ↳ .brain/raw/00_review_guidelines.md
 ↳ .brain/raw/05_qa_<slug>.md  (pre-scaffolded for each criterion)
