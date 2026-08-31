@@ -33,6 +33,20 @@ data does not.
 How this domain reads the criteria the venue supplied. `gating` is the
 **default** only — a venue's own gating always wins.
 
+**This table is a lens, not the criteria list.** It says how a criterion is
+read in this field. It does not decide which criteria exist, and it does not
+cap them at these rows. Keep every criterion the venue's guidelines define,
+and add a paper-specific criterion whenever the paper warrants one — a
+completeness-and-scope criterion for a classification theorem, a
+numerical-validity criterion for a computational claim, a data-availability
+criterion for a resource paper. A criterion with no row below is instantiated
+by reading it the way this field's §04 and §06 read evidence and verification.
+
+Collapsing every paper in a field onto a fixed five rows trades away exactly
+the paper-specific critique a referee exists to provide. That failure has been
+observed: a fixed list dropped a completeness criterion, and with it a correct
+finding that a classification theorem covered only the finite case.
+
 | Criterion slug | What it means here | Default gating |
 |---|---|---|
 | `novelty` | Is this a first observation, a materially improved precision, a new regime, or a new technique? A repeat measurement at comparable precision is a confirmation, which some venues value and others do not. | `true` |

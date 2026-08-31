@@ -56,7 +56,7 @@ Sections marked ★ are required; a profile missing one is invalid.
 |---|---|---|
 | 01 ★ | Front matter | `domain`, `aliases`, `version`, `last_verified` |
 | 02 ★ | Detection cues | how to recognise this domain; hybrid handling |
-| 03 ★ | Criterion instantiation | what each venue criterion *means here*, plus default gating |
+| 03 ★ | Criterion instantiation | how each criterion is *read* in this field, plus default gating. **A lens, not the criteria list** — the venue and the paper decide which criteria exist, and paper-specific criteria beyond these rows are expected |
 | 04 ★ | What counts as evidence | the extraction fields the Summary phase must fill |
 | 05 ★ | Nearest prior work | what the Scout phase should hunt for in this domain |
 | 06 ★ | Verifiability checks | each tagged automatic / semi-automatic / manual |

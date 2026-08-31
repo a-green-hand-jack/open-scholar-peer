@@ -137,7 +137,22 @@ domain profile is `venue-set` precisely because it must not be inferred from the
 discipline — doing so introduces a systematic bias across every paper in that
 field.
 
-If the venue uses 7 criteria, you produce 7 entries. If 3, you produce 3. The number is venue-driven, not fixed.
+**The criteria list is driven by the venue and the paper, never by the profile.**
+The domain profile's §03 table says how a criterion is *read* in this field; it
+is not the list. Derive the criteria from `00_review_guidelines.md`, then **add
+a paper-specific criterion whenever the paper warrants one** — a
+completeness-and-scope criterion for a classification theorem, a
+numerical-validity criterion for a computational claim, a data-availability
+criterion for a resource paper. A criterion with no row in §03 is perfectly
+valid; instantiate it by reading the profile's §04 and §06.
+
+Do not normalise every paper in a field onto the same five slugs. A measured
+case: a fixed five-criterion list dropped a completeness criterion, and with it
+a correct finding that a classification theorem covered only the finite-outcome
+case. The adaptive list had caught it; the fixed list did not.
+
+If the venue uses 7 criteria, you produce 7 entries. If 3, you produce 3, plus
+any the paper itself demands. The number is venue- and paper-driven, not fixed.
 
 ### 7. Pre-scaffold empty Q&A files
 
