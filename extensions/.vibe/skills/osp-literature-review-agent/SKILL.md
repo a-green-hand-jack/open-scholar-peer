@@ -80,8 +80,10 @@ of each month). Four tools, all contributed by OSP MCP:
 - `osp-mcp.search_bohrium_paper(query, size=10, year_from, year_to, jcr)` — paper records with year/JCR filters
 - `osp-mcp.get_bohrium_paper_graph(paper_id, max_nodes=25, max_edges=40)` — expand a key paper's graph
 
-If `session.json.mcp.bohrium_available` is `false` — or the LKM tools return
-`{"error": ...}` — **then and only then** fall back to:
+`session.json.mcp.bohrium_available` is an advisory flag. **Always attempt the LKM
+tools first** (the default flag value is `false` in headless runs where a shell
+probe cannot run). Fall back to Google Scholar **only** when an LKM tool
+actually returns `{"error": ...}`:
 
 - `osp-mcp.search_google_scholar` / `osp-mcp.search_google_scholar_advanced` — slower best-effort HTML scrape; never prefer it while LKM is reachable
 

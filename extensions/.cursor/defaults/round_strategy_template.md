@@ -11,7 +11,7 @@
   - `osp-mcp.get_bohrium_paper_graph` (expand a top hit's graph)
   - `osp-mcp.search_arxiv`
   - `osp-mcp.search_semantic_scholar`
-  - `osp-mcp.search_google_scholar` (FALLBACK only — when `mcp.bohrium_available` is `false` or LKM tools error out)
+  - `osp-mcp.search_google_scholar` (FALLBACK only — when the LKM tools error out)
   - native Web Search (where available)
 - **Query formulation rules for this round:**
   - Round 1 (sub-domain-anchor): use the paper's stated sub-domain and primary keywords; aim for the canonical 10–20 most-cited works in this area. LKM: `search_bohrium_lkm` with scopes `conclusion,abstract` (claims-level view of established prior art) + `search_bohrium_paper` for citation counts.

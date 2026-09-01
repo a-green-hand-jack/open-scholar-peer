@@ -1,10 +1,13 @@
 """
 osp_mcp.py — Open ScholarPeer consolidated MCP server.
 
-Exposes academic-search tools across three providers:
+Exposes academic-search tools across four providers:
   • arXiv          — pre-prints, no API key needed
   • Semantic Scholar — citation graph, abstracts; API key recommended for higher rate limits
-  • Google Scholar — broad coverage including blog posts, theses, workshop papers
+  • Bohrium LKM    — primary "broader coverage" source: claims, reasoning chains, paper
+                     graphs via the `bohr` CLI (~3 s/call, fixed-price)
+  • Google Scholar — fallback broader coverage (best-effort HTML scrape, slow,
+                     only used when Bohrium LKM is unavailable)
 
 Design principles:
   1. Dumb tools only — no agentic logic. Each tool is atomic, stateless.
@@ -23,6 +26,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import shutil
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
@@ -30,6 +34,7 @@ from mcp.server.fastmcp import FastMCP
 from providers import arxiv as arxiv_provider
 from providers import semantic_scholar as ss_provider
 from providers import google_scholar as gs_provider
+from providers import bohrium as bohrium_provider
 
 try:
     from dotenv import load_dotenv
@@ -453,6 +458,254 @@ async def get_google_scholar_author_info(author_name: str) -> dict[str, Any]:
         return {"error": f"get_google_scholar_author_info failed: {e}"}
 
 
+# ---------- Bohrium LKM ----------------------------------------------------
+
+@mcp.tool()
+async def search_bohrium_lkm(
+    query: str,
+    top_k: int = 10,
+    scopes: str = "conclusion,abstract",
+) -> dict[str, Any]:
+    """Search Bohrium's Large Knowledge Model corpus (claims + papers).
+
+    This is the PRIMARY replacement for Google Scholar in the Literature
+    phase. LKM is a semantic + keyword index over scientific claims, abstracts,
+    conclusions, and questions — not a web scrape — so queries hit the content
+    of prior work, and results come back in ~3 seconds with structured paper
+    metadata (title, authors, DOI, venue, date).
+
+    Prefer this over search_google_scholar whenever it is available. Each call
+    is fixed-price (0.05 CNY, covered first by LKM's personal monthly 1,000-call
+    quota).
+
+    Args:
+        query: Natural-language search query (e.g. "multi-agent peer review").
+        top_k: Number of results to return (default 10).
+        scopes: Comma-separated content scopes to search:
+            abstract|claim|premise|conclusion|question|problem|open_question|
+            subproblem|reasoning_chain (default "conclusion,abstract").
+
+    Returns:
+        Dict with keys: papers (list of {id, title, authors, doi, venue, area,
+        date}) and variables (list of LKM claim records). Returns
+        {"error": "..."} on failure (e.g. bohr CLI missing or not logged in).
+    """
+    log.info("search_bohrium_lkm(query=%r, top_k=%d, scopes=%r)", query, top_k, scopes)
+    try:
+        return await _run(bohrium_provider.search_lkm, query, top_k, scopes)
+    except Exception as e:
+        return {"error": f"search_bohrium_lkm failed: {e}"}
+
+
+@mcp.tool()
+async def search_bohrium_reasoning(query: str, top_k: int = 10) -> dict[str, Any]:
+    """Search LKM reasoning chains (conclusions with their supporting logic).
+
+    Each hit is a conclusion plus a score and the paper it belongs to. Use this
+    for the method-anchor literature round: it finds prior work that reached a
+    result through the same technique, not just the same topic.
+
+    Args:
+        query: Natural-language query about the method/technique.
+        top_k: Number of reasoning chains to return (default 10).
+
+    Returns:
+        Dict with keys: papers (list of paper records) and reasoning_chains
+        (list of {paper_id, conclusion_title, conclusion_text, score}).
+        Returns {"error": "..."} on failure.
+    """
+    log.info("search_bohrium_reasoning(query=%r, top_k=%d)", query, top_k)
+    try:
+        return await _run(bohrium_provider.search_reasoning, query, top_k)
+    except Exception as e:
+        return {"error": f"search_bohrium_reasoning failed: {e}"}
+
+
+@mcp.tool()
+async def get_bohrium_paper_graph(
+    paper_id: str,
+    max_nodes: int = 25,
+    max_edges: int = 40,
+) -> dict[str, Any]:
+    """Retrieve a paper-level knowledge graph from LKM.
+
+    Given a numeric LKM paper id (from search_bohrium_lkm / search_bohrium_
+    reasoning / search_bohrium_paper), returns the paper metadata, the problems
+    it addresses, its open questions, and a bounded node/edge graph. Use after
+    a top hit to expand into its references and reasoning structure without
+    another full search.
+
+    Args:
+        paper_id: Numeric LKM paper id (e.g. "1106616599630053397").
+        max_nodes: Maximum graph nodes to include (default 25).
+        max_edges: Maximum graph edges to include (default 40).
+
+    Returns:
+        Dict with keys: paper, addressed_problems, open_questions, graph
+        ({graph_empty, node_count, edge_count, nodes, edges}). A paper that
+        exists but has no extracted knowledge graph returns graph_empty=true
+        with zero nodes/edges — inspect graph_empty before iterating nodes.
+        Node contents are truncated to 400 chars to bound the payload.
+        Returns {"error": "..."} on failure.
+    """
+    log.info("get_bohrium_paper_graph(paper_id=%r, nodes=%d, edges=%d)",
+             paper_id, max_nodes, max_edges)
+    try:
+        return await _run(bohrium_provider.get_paper_graph, paper_id, max_nodes, max_edges)
+    except Exception as e:
+        return {"error": f"get_bohrium_paper_graph failed: {e}"}
+
+
+@mcp.tool()
+async def search_bohrium_paper(
+    query: str,
+    size: int = 10,
+    year_from: int | None = None,
+    year_to: int | None = None,
+    jcr: str | None = None,
+) -> dict[str, Any]:
+    """Search Bohrium's academic paper index (normal tier).
+
+    Returns clean paper records with citation counts, venue, DOI, and JCR
+    zone. Year filters make this the natural tool for the temporal-expansion
+    round ("last 12 months"). Normal tier is 0.05 CNY/call; enhanced tier
+    (--type 1) is 0.10 CNY and is NOT used by this tool.
+
+    Args:
+        query: Free-form paper search query.
+        size: Page size (default 10).
+        year_from: Optional inclusive start year (e.g. 2025).
+        year_to: Optional inclusive end year (e.g. 2026).
+        jcr: Optional comma-separated JCR zones (e.g. "Q1,Q2").
+
+    Returns:
+        Dict with keys: papers (list of {title, authors, abstract, doi,
+        paper_id, venue, date, citations, jcr_zone, url}) and pagination.
+        Returns {"error": "..."} on failure.
+    """
+    log.info("search_bohrium_paper(query=%r, size=%d, yr=%s-%s, jcr=%r)",
+             query, size, year_from, year_to, jcr)
+    try:
+        return await _run(
+            bohrium_provider.search_papers, query, size, year_from, year_to, jcr
+        )
+    except Exception as e:
+        return {"error": f"search_bohrium_paper failed: {e}"}
+
+
+# ---------- Bohrium LKM PDF parse (query-seeding enhancement) ---------------
+
+@mcp.tool()
+async def submit_bohrium_pdf(pdf_path: str) -> dict[str, Any]:
+    """Submit a local PDF to Bohrium LKM for knowledge extraction.
+
+    Feed the paper UNDER REVIEW through this (from `.brain/input/`) to learn
+    its own questions, conclusions, and reasoning steps — then use those as
+    query seeds in `/2-osp-literature`, so the searches target the paper's
+    actual claims instead of a paraphrase.
+
+    Free to submit. Returns task_id plus pdf_md5 and cache_hit. The task runs
+    asynchronously: poll with check_bohrium_parse_task or wait_bohrium_parse_
+    task, then fetch the result with get_bohrium_parse_result (billable).
+
+    Paper limits: non-empty regular PDF, at most 64 MiB and 50 pages. If the
+    paper exceeds these, submit fails — proceed with the literature phase
+    without the extraction.
+
+    Args:
+        pdf_path: Absolute or relative path to the PDF to parse.
+
+    Returns:
+        Dict with keys: task_id, status, pdf_md5, cache_hit, created_at.
+        Returns {"error": "..."} on failure.
+    """
+    log.info("submit_bohrium_pdf(pdf_path=%r)", pdf_path)
+    try:
+        return await _run(bohrium_provider.parse_submit, pdf_path)
+    except Exception as e:
+        return {"error": f"submit_bohrium_pdf failed: {e}"}
+
+
+@mcp.tool()
+async def check_bohrium_parse_task(task_id: str) -> dict[str, Any]:
+    """Check an LKM PDF-parse task's current status. Free.
+
+    Non-terminal stages: queued, running. Terminal stages: succeeded, partial,
+    failed. `partial` means the paper could not produce a complete knowledge
+    graph (do not resubmit it); `failed` is technical and the PDF may be
+    resubmitted.
+
+    Args:
+        task_id: The task id returned by submit_bohrium_pdf.
+
+    Returns:
+        Dict with keys: task_id, status, stage, updated_at. Returns
+        {"error": "..."} on failure.
+    """
+    log.info("check_bohrium_parse_task(task_id=%r)", task_id)
+    try:
+        return await _run(bohrium_provider.parse_status, task_id)
+    except Exception as e:
+        return {"error": f"check_bohrium_parse_task failed: {e}"}
+
+
+@mcp.tool()
+async def wait_bohrium_parse_task(
+    task_id: str,
+    interval_s: int = 5,
+    timeout_s: int = 60,
+) -> dict[str, Any]:
+    """Block until an LKM PDF-parse task reaches a terminal state. Free.
+
+    The CLI wait is interrupted at `timeout_s` seconds. A timeout is NOT a
+    failure — it returns status "running" and the remote task keeps going, so
+    just call this again (or check_bohrium_parse_task). Keep `timeout_s`
+    below the MCP server's OSP_CALL_TIMEOUT (default 90) or the outer wrapper
+    will cut the call first.
+
+    Args:
+        task_id: The task id returned by submit_bohrium_pdf.
+        interval_s: Poll interval in seconds (default 5).
+        timeout_s: How long to wait before returning (default 60).
+
+    Returns:
+        Dict with the terminal status (task_id, status, stage) or a
+        {"task_id", "status": "running", "warning"} on wait timeout.
+        Returns {"error": "..."} on hard failure.
+    """
+    log.info("wait_bohrium_parse_task(task_id=%r, interval=%ds, timeout=%ds)",
+             task_id, interval_s, timeout_s)
+    try:
+        return await _run(bohrium_provider.parse_wait, task_id, interval_s, timeout_s)
+    except Exception as e:
+        return {"error": f"wait_bohrium_parse_task failed: {e}"}
+
+
+@mcp.tool()
+async def get_bohrium_parse_result(task_id: str) -> dict[str, Any]:
+    """Fetch a completed LKM PDF-parse task's knowledge extraction. Billable.
+
+    Result pricing: 1.00 CNY the first time for a submission that did not hit
+    cache, 0.10 CNY on a cache hit. Only call after the task is terminal
+    (check_bohrium_parse_task / wait_bohrium_parse_task said succeeded).
+    Returns addressed problems, open questions, and a nodes/edges graph —
+    the paper's own research questions and conclusions that seed literature
+    queries.
+
+    Args:
+        task_id: The task id returned by submit_bohrium_pdf.
+
+    Returns:
+        Dict shaped like get_bohrium_paper_graph: paper, addressed_problems,
+        open_questions, graph. Returns {"error": "..."} on failure.
+    """
+    log.info("get_bohrium_parse_result(task_id=%r)", task_id)
+    try:
+        return await _run(bohrium_provider.parse_result, task_id)
+    except Exception as e:
+        return {"error": f"get_bohrium_parse_result failed: {e}"}
+
+
 # ---------- Server entrypoint ----------------------------------------------
 
 if __name__ == "__main__":
@@ -461,4 +714,8 @@ if __name__ == "__main__":
     else:
         log.info("No SEMANTIC_SCHOLAR_API_KEY in env — Semantic Scholar will use anonymous limits.")
     log.info("Starting Open ScholarPeer MCP server (osp_mcp), timeout=%ds", _TIMEOUT)
+    if shutil.which("bohr") is not None:
+        log.info("Bohrium LKM CLI detected — LKM-first literature retrieval enabled.")
+    else:
+        log.info("No 'bohr' CLI found — Google Scholar will be used as fallback.")
     mcp.run(transport="stdio")

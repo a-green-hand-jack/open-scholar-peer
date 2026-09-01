@@ -30,7 +30,7 @@ Invoke the `osp-literature-review-agent` skill.
 | 2 | `method-anchor` | Search using the method's name and key technical terms | `search_bohrium_reasoning` + `search_bohrium_lkm` (method terms) + `get_bohrium_paper_graph` on top hit |
 | 3 | `temporal-expansion` | Filter to last 12 months; include arXiv pre-prints, concurrent submissions | `search_bohrium_paper` (year_from/year_to = last 12 months) + `search_arxiv` (date-sorted) |
 
-Google Scholar (`search_google_scholar*`) participates ONLY when `session.json.mcp.bohrium_available` is `false` or the LKM tools return `{"error": ...}`.
+Google Scholar (`search_google_scholar*`) participates ONLY when the LKM tools return `{"error": ...}` — the `mcp.bohrium_available` flag is advisory, not a gate.
 
 ## Steps
 

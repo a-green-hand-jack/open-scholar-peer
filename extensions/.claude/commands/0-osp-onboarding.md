@@ -25,7 +25,7 @@ Bohrium LKM is the Literature phase's primary broad-coverage retrieval source; G
 
 - Probe the environment (best-effort, if shell commands are possible): `command -v bohr`. If present, optionally confirm login with `bohr auth status` (expect `ok: true` / `logged_in: true`).
 - Set `session.json.mcp.bohrium_available = true` when the `bohr` CLI is installed and logged in; otherwise `false`. Never read, print, or log any credential — the CLI stores its own login.
-- If the probe cannot run, leave `bohrium_available` at its default (`false`); the Literature agent will attempt LKM tools anyway and fall back to Google Scholar on `{"error": ...}` from the MCP layer.
+- The flag is **advisory, not a gate**: `/2-osp-literature` always attempts the LKM tools first and falls back to Google Scholar only when an LKM tool actually returns `{"error": ...}`. A false flag (e.g. headless runs where `command -v bohr` cannot run) never blocks the LKM attempt.
 
 ### 2. Locate the paper and ensure a readable text version
 
