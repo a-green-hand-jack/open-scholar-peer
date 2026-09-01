@@ -50,6 +50,28 @@ osp doctor
 
 `osp doctor` also checks that OpenCode and `pdftotext` are available.
 
+### `osp review` fails at startup with "Failed to initialize provider" or "Cannot connect to API"
+
+Linux CLI runs execute OpenCode inside a Bubblewrap sandbox that exposes only
+`~/.config/opencode`, `~/.opencode`, and the OpenCode auth store. The model you
+select must work from inside that sandbox:
+
+- Use a self-contained provider whose key lives under `~/.config/opencode/`,
+  for example `--model apex/gpt-5.6-sol` (reads `account-keys/apex-gpt.key`).
+- Virtual routers that read host OAuth files outside `~/.config/opencode`
+  (e.g. `gpt-priority`, which loads Codex auth from `~/.codex`) fail to
+  initialize inside the sandbox by design — prefer the concrete provider for
+  CLI runs.
+- `Cannot connect to API` means the sandbox cannot reach the provider endpoint.
+  Confirm the machine can reach the base URL and that DNS resolves (Ubuntu
+  binds `/run/systemd/resolve` automatically).
+
+A quick sandbox sanity check outside the review pipeline:
+
+```bash
+opencode run -m apex/gpt-5.6-sol --format json "reply with exactly: pong"
+```
+
 ### Installer wrote files but the AI tool doesn't see commands
 
 Reload the tool:

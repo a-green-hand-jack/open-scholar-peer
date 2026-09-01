@@ -15,13 +15,16 @@ For an autonomous OpenCode-native standalone review, install the CLI and run:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/a-green-hand-jack/open-scholar-peer/main/install_cli.sh | bash
 export PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:$PATH"
-osp review ./paper.pdf --output ./osp-review --mode autonomous --headless
+osp doctor
+osp review ./paper.pdf --output ./osp-review --mode autonomous --headless \
+  --model apex/gpt-5.6-sol
 ```
 
 The CLI accepts PDFs, TeX directories, source archives, and existing OSP
 workspaces. It creates an isolated timestamped run, preserves checkpoints, and
 exports `./osp-review/final_review.md`. See [`docs/OSP_CLI.md`](docs/OSP_CLI.md)
-for provider/model configuration, resume, validation, and provenance trails.
+for provider/model configuration, resume, validation, and provenance trails,
+and a layered smoke test (`osp doctor` → `--prepare-only` → a full review).
 
 ---
 

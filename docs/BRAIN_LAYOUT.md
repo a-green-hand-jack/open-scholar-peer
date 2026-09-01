@@ -2,6 +2,12 @@
 
 The `.brain/` directory at the project root is the persistent state store for an OSP review session. It is gitignored — it may contain confidential paper content and is never committed.
 
+> **Standalone CLI runs:** the slash-command workflow keeps `.brain/` at the
+> user's project root, as documented below. The standalone CLI (`osp review`)
+> instead creates the same `.brain/` tree **inside each isolated run directory**
+> (`<output>/osp-<timestamp>-<digest>-<rand>/.brain/`) and never writes a
+> `.brain/` anywhere else. See `OSP_CLI.md` → "Run directory layout".
+
 ## Tree
 
 ```
