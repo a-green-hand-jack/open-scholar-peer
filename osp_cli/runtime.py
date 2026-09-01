@@ -555,6 +555,10 @@ class OSPRun:
                 "write": "allow",
                 "patch": "allow",
                 "task": "allow",
+                # OSP MCP retrieval tools are named `osp_*` (e.g.
+                # `osp_search_bohrium_lkm`); without this allow they are
+                # hidden from the agent's tool list under the `*: deny` rule.
+                "osp_*": "allow",
                 "webfetch": "deny" if network_policy == "offline" else "allow",
                 "websearch": "deny" if network_policy == "offline" else "allow",
                 "external_directory": "deny",
@@ -574,6 +578,7 @@ class OSPRun:
                         "write": "allow",
                         "patch": "allow",
                         "task": "allow",
+                        "osp_*": "allow",
                         "webfetch": "deny" if network_policy == "offline" else "allow",
                         "websearch": "deny" if network_policy == "offline" else "allow",
                         "external_directory": "deny",
@@ -861,14 +866,16 @@ class OSPRun:
         for path in self.run_dir.rglob("*"):
             if path.is_symlink() or not path.is_file():
                 continue
-            # .opencode/ holds the generated adapter bundle plus npm packages
-            # OpenCode auto-installs there while a phase runs; it is
-            # CLI-owned, not an agent artifact, so it is outside the write
-            # contract enforced for phase runs.
+            # CLI-owned tooling, not review content: .opencode/ holds the
+            # generated adapter bundle plus npm packages OpenCode auto-installs
+            # while a phase runs; .open-scholar-peer/ is the MCP runtime install
+            # (it can gain __pycache__ when the MCP server loads providers).
+            # Neither may fail phase-write checks.
             if (
                 path.is_relative_to(self.run_dir / ".brain")
                 or path.is_relative_to(self.run_dir / RUNTIME_DIR)
                 or path.is_relative_to(self.run_dir / ".opencode")
+                or path.is_relative_to(self.run_dir / ".open-scholar-peer")
             ):
                 continue
             result[path.relative_to(self.run_dir).as_posix()] = sha256_file(path)
@@ -957,7 +964,19 @@ class OSPRun:
 
     def _phase_prompt(self, phase: str, options: RunOptions, literature_round: int | None = None) -> str:
         command = COMMANDS[phase]
-        final_structure = " For the final review, preserve the venue-formatted review inside `## Output` and wrap it in the mandatory top-level `## Method`, `## Output`, and `## Provenance` sections." if phase == "review" else ""
+        final_structure = " Write the final review artifact to exactly `.brain/review/final_review.md` (your `writes:` contract names that file; do not use any other filename such as `06_review.md`). Preserve the venue-formatted review inside `## Output` and wrap it in the mandatory top-level `## Method`, `## Output`, and `## Provenance` sections." if phase == "review" else ""
+        retrieval_guidance = ""
+        if phase in ("literature", "baseline_scout") and options.prepare_mcp:
+            retrieval_guidance = (
+                "\nThe OSP MCP server ships with the retrieval tools below (already configured in this workspace's "
+                "`opencode.json`, no setup needed). They ARE available to you even if the tool list looks busy. The "
+                "tools are prefixed with `osp_`, so look for EXACTLY: `osp_search_bohrium_lkm`, "
+                "`osp_search_bohrium_reasoning`, `osp_search_bohrium_paper`, `osp_get_bohrium_paper_graph`, "
+                "`osp_search_arxiv`, `osp_search_semantic_scholar`. Use them for live retrieval; Bohrium LKM is the "
+                "primary broad-coverage source and Google Scholar (`osp_search_google_scholar`) is the fallback only "
+                "when LKM errors. Never claim these tools are unavailable without first attempting a call, and never "
+                "fall back to web scraping while they return data."
+            )
         if phase == "onboarding":
             required_hint = "Write `.brain/raw/00_review_guidelines.md`, populate `session.json.qa_criteria`, and scaffold one empty `05_qa_<slug>.md` per criterion under `.brain/raw/`."
         elif phase == "review":
@@ -976,7 +995,7 @@ class OSPRun:
         return f"""Execute only OSP phase `{phase}` by following `/{command}` in this isolated workspace. You are the file-capable primary executor: perform all required reads and writes yourself in this turn. Do not delegate the phase to a subagent or merely describe the work.
 
 This is an autonomous, report-only peer-review run. Do not modify `source/` or invent paper facts. Read `.brain/session.json` and obey the installed OSP artifact contract. {required_hint} {f'This is literature round {literature_round} of 3: execute exactly that round; only consolidate and mark the literature phase completed after round 3.' if literature_round else 'Complete the phase fully and update only the corresponding session phase to completed.'}{final_structure} Do not advance to another phase. Unknown evidence must be labeled unresolved or not assessable.
-
+{retrieval_guidance}
 The CLI supplied venue={options.venue or 'unresolved'}, domain={options.domain or 'unresolved'}, network-policy={options.network_policy}. Do not request credentials or write secrets. Put any disposable scratch output only in `.brain/tmp/`.
 """
 
@@ -985,7 +1004,7 @@ The CLI supplied venue={options.venue or 'unresolved'}, domain={options.domain o
         executable = shutil.which("opencode")
         if not executable:
             raise OSPError("OpenCode is not installed or not on PATH. Run `osp doctor`.")
-        command = [executable, "run", "--pure", "--dir", str(cwd), "--agent", "osp-runner", "--format", "json", "--thinking"]
+        command = [executable, "run", "--dir", str(cwd), "--agent", "osp-runner", "--format", "json", "--thinking"]
         model = options.resolved_model()
         if model:
             command.extend(("--model", model))
@@ -1057,8 +1076,72 @@ The CLI supplied venue={options.venue or 'unresolved'}, domain={options.domain o
         auth = home / ".local" / "share" / "opencode" / "auth.json"
         if auth.is_file():
             sandbox.extend(("--ro-bind", str(auth), str(auth)))
+        sandbox.extend(OSPRun._bohrium_sandbox_binds())
+        sandbox.extend(OSPRun._interpreter_sandbox_binds(cwd))
         sandbox.extend(("--bind", str(cwd), str(cwd), "--chdir", str(cwd), "--", *command))
         return sandbox
+
+    @staticmethod
+    def _interpreter_sandbox_binds(cwd: Path) -> list[str]:
+        """Read-only binds for home-managed Python interpreters.
+
+        The MCP venv's `bin/python` is usually a symlink into a version-managed
+        interpreter under `$HOME` (uv, pyenv, asdf) which the empty sandbox
+        home would otherwise hide, preventing the OSP MCP server from starting.
+        Bind the manager root that contains the resolved interpreter.
+        """
+        binds: list[str] = []
+        mcp_python = cwd / ".open-scholar-peer" / "mcp" / ".venv" / "bin" / "python"
+        if not mcp_python.exists():
+            return binds
+        real = os.path.realpath(mcp_python)
+        home = Path.home()
+        for prefix in (home / ".local" / "share" / "uv", home / ".pyenv", home / ".asdf"):
+            if str(prefix) in real and prefix.is_dir():
+                binds.extend(("--ro-bind", str(prefix), str(prefix)))
+                break
+        return binds
+
+    @staticmethod
+    def _bohrium_sandbox_binds() -> list[str]:
+        """Read-only binds exposing the Bohrium `bohr` CLI to the sandbox.
+
+        The literature phase shells out to `bohr` (npm global CLI) from the OSP
+        MCP server. Unless the binary and its login config (default `~/.bohr`)
+        are visible inside the bubblewrap sandbox, LKM searches silently fail
+        and fall back to Google Scholar. Both binds are read-only; the model
+        inside the sandbox cannot read them (bash is denied).
+        """
+        binds: list[str] = []
+        bohr = shutil.which("bohr")
+        if bohr:
+            real = os.path.realpath(bohr)
+            prefix = ""
+            try:
+                npm = shutil.which("npm")
+                if npm:
+                    prefix = subprocess.run(
+                        [npm, "prefix", "-g"], capture_output=True, text=True, check=False
+                    ).stdout.strip()
+            except Exception:
+                prefix = ""
+            if not prefix:
+                bin_dir = os.path.dirname(real)
+                if os.path.basename(bin_dir) == "bin":
+                    prefix = os.path.dirname(bin_dir)
+            # Bind home-based npm prefixes (linuxbrew, nvm, …). System prefixes
+            # under /usr are already visible through the sandbox's /usr bind.
+            if prefix and os.path.isdir(prefix) and prefix.startswith("/home/"):
+                binds.extend(("--ro-bind", prefix, prefix))
+        cfg_candidates = (Path.home() / ".bohr", Path.home() / ".bohr-cli")
+        for cfg in cfg_candidates:
+            if cfg.exists():
+                binds.extend(("--dir", str(cfg)))
+                binds.extend(
+                    ("--ro-bind-file", str(cfg), str(cfg))
+                    if cfg.is_file() else ("--ro-bind", str(cfg), str(cfg))
+                )
+        return binds
 
     @staticmethod
     def _require_compatible_opencode() -> None:
