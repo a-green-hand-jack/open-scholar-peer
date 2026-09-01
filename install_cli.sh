@@ -5,7 +5,7 @@ set -euo pipefail
 
 REPOSITORY="${OSP_REPOSITORY:-a-green-hand-jack/open-scholar-peer}"
 REF="${OSP_REF:-main}"
-SCRIPT_SOURCE="${BASH_SOURCE[0]}"
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-}"
 SOURCE_DIR=""
 TEMP_DIR=""
 
