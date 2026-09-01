@@ -12,6 +12,7 @@ import { initialPhases, RunStateSchema } from "./state.js";
 import { PHASES } from "./phases.js";
 import { validateRun } from "./validation.js";
 import { ReviewController } from "./controller.js";
+import { installRuntimeAssets } from "./config.js";
 
 const program = new Command();
 program.name("osp").description("OpenCode-native Open ScholarPeer review agent").version("2.0.0");
@@ -20,7 +21,7 @@ function repoRoot(): string {
   return resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 }
 
-async function prepare(source: string, output: string, mode: "autonomous" | "collaborative"): Promise<string> {
+async function prepare(source: string, output: string, mode: "autonomous" | "collaborative", networkPolicy: "online" | "offline", model?: string, variant?: string): Promise<string> {
   const sourcePath = resolve(source);
   const parent = resolve(output);
   const token = randomBytes(3).toString("hex");
@@ -29,14 +30,10 @@ async function prepare(source: string, output: string, mode: "autonomous" | "col
   await mkdir(join(runDir, ".brain", "review"), { recursive: true });
   await mkdir(join(runDir, ".brain", "tmp"), { recursive: true });
   await cp(join(repoRoot(), ".brain-template", "session.json"), join(runDir, ".brain", "session.json"));
-  const canonical = join(repoRoot(), "extensions", "_shared");
-  await cp(join(canonical, "commands"), join(runDir, ".opencode", "commands"), { recursive: true });
-  await cp(join(canonical, "skills"), join(runDir, ".opencode", "agents"), { recursive: true });
-  await cp(join(canonical, "defaults"), join(runDir, ".opencode", "defaults"), { recursive: true });
-  await cp(join(canonical, "rules", "osp-rules.md"), join(runDir, ".opencode", "AGENTS.md"));
+  await installRuntimeAssets(runDir, networkPolicy);
   await writeFile(join(runDir, "AGENTS.md"), "# Open ScholarPeer Review Workspace\n\nFollow `.opencode/AGENTS.md`. Execute only the controller-selected phase. Never modify `source/`.\n", "utf8");
   const imported = await importSource(sourcePath, runDir);
-  const scope = { workflow: [...PHASES], mode, input_digest: imported.digest, source_kind: imported.kind };
+  const scope = { workflow: [...PHASES], mode, network_policy: networkPolicy, model: model ?? null, variant: variant ?? null, input_digest: imported.digest, source_kind: imported.kind };
   const state = RunStateSchema.parse({
     schema_version: "osp-run-v2", run_id: runDir.split("/").pop(), status: "prepared", mode,
     phases: initialPhases(), current_phase: null, scope,
@@ -58,9 +55,11 @@ program.command("review <source>")
   .option("--model <model>", "provider/model reference")
   .option("--variant <variant>", "OpenCode model variant")
   .option("--timeout <seconds>", "phase timeout", "1800")
-  .action(async (source: string, options: { output: string; mode: "autonomous" | "collaborative"; headless?: boolean; prepareOnly?: boolean; model?: string; variant?: string; timeout: string }) => {
+  .option("--network-policy <policy>", "online or offline", "online")
+  .action(async (source: string, options: { output: string; mode: "autonomous" | "collaborative"; headless?: boolean; prepareOnly?: boolean; model?: string; variant?: string; timeout: string; networkPolicy: "online" | "offline" }) => {
     if (!["autonomous", "collaborative"].includes(options.mode)) throw new Error("--mode must be autonomous or collaborative");
-    const runDir = await prepare(source, options.output, options.mode);
+    if (!["online", "offline"].includes(options.networkPolicy)) throw new Error("--network-policy must be online or offline");
+    const runDir = await prepare(source, options.output, options.mode, options.networkPolicy, options.model, options.variant);
     console.log(`Prepared OSP review workspace: ${runDir}`);
     if (options.prepareOnly) return;
     await new ReviewController({ workspace: runDir, mode: options.mode, headless: Boolean(options.headless), model: options.model, variant: options.variant, timeoutMs: Number(options.timeout) * 1000 }).run();

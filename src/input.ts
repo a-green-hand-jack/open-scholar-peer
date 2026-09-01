@@ -47,18 +47,46 @@ export async function importSource(sourceArg: string, workspace: string): Promis
     const sourceFiles = await files(sourceRoot);
     return { kind: "pdf", digest: await digest(sourceFiles, sourceRoot), source: source };
   }
-  if (!sourceStat.isDirectory()) throw new Error("expected a PDF or TeX directory");
-  const sourceFiles = await files(source);
+  let importRoot = source;
+  let kind = "tex-directory";
+  if (sourceStat.isFile() && /\.(zip|tar|tgz|tar\.gz)$/i.test(source)) {
+    importRoot = join(workspace, ".archive-staging");
+    await mkdir(importRoot, { recursive: true });
+    const command = source.toLowerCase().endsWith(".zip") ? "unzip" : "tar";
+    try {
+      if (command === "unzip") {
+        const listing = await execa("unzip", ["-Z1", source]);
+        for (const member of listing.stdout.split("\n").filter(Boolean)) {
+          const target = resolve(importRoot, member);
+          if (target !== importRoot && !target.startsWith(`${importRoot}/`)) throw new Error(`archive path escapes workspace: ${member}`);
+        }
+        await execa("unzip", ["-q", source, "-d", importRoot]);
+      } else {
+        const listing = await execa("tar", ["-tzf", source]);
+        for (const member of listing.stdout.split("\n").filter(Boolean)) {
+          const target = resolve(importRoot, member);
+          if (target !== importRoot && !target.startsWith(`${importRoot}/`)) throw new Error(`archive path escapes workspace: ${member}`);
+        }
+        if (listing.stdout.split("\n").some((member) => member.startsWith("../") || member.includes("/../"))) throw new Error("archive contains an unsafe path");
+        await execa("tar", ["-xzf", source, "-C", importRoot]);
+      }
+    } catch (error) { throw new Error(`could not safely extract archive: ${error instanceof Error ? error.message : String(error)}`); }
+    const entries = await readdir(importRoot, { withFileTypes: true });
+    if (entries.length === 1 && entries[0].isDirectory()) importRoot = join(importRoot, entries[0].name);
+    kind = "archive";
+  }
+  if (!sourceStat.isDirectory() && kind !== "archive") throw new Error("expected a PDF, TeX directory, or source archive");
+  const sourceFiles = await files(importRoot);
   const paperFiles = sourceFiles.filter((path) => ALLOWED.has(path.slice(path.lastIndexOf(".")).toLowerCase()) || basename(path).toLowerCase() === "makefile");
   if (!paperFiles.some((path) => path.endsWith(".tex") || path.endsWith(".pdf") || basename(path) === "paper.md")) throw new Error("source directory contains neither TeX files, paper.md, nor PDF");
-  for (const path of paperFiles) await cp(path, join(sourceRoot, relative(source, path)));
+  for (const path of paperFiles) await cp(path, join(sourceRoot, relative(importRoot, path)));
   const paper = paperFiles.find((path) => basename(path) === "paper.md") ?? paperFiles.find((path) => path.endsWith(".pdf"));
   if (paper && paper.endsWith(".pdf")) {
-    await cp(join(sourceRoot, relative(source, paper)), join(inputRoot, "paper.pdf"));
+    await cp(join(sourceRoot, relative(importRoot, paper)), join(inputRoot, "paper.pdf"));
     try { await execa("pdftotext", ["-layout", join(inputRoot, "paper.pdf"), join(inputRoot, "paper.md")]); } catch { throw new Error("could not convert source PDF"); }
-  } else if (paper) await cp(join(sourceRoot, relative(source, paper)), join(inputRoot, "paper.md"));
-  else await (await import("node:fs/promises")).writeFile(join(inputRoot, "paper.md"), "# Imported TeX source\n\n" + (await Promise.all(paperFiles.filter((path) => path.endsWith(".tex")).map(async (path) => `## Source: ${relative(source, path)}\n\n${await readFile(path, "utf8")}`))).join("\n"));
+  } else if (paper) await cp(join(sourceRoot, relative(importRoot, paper)), join(inputRoot, "paper.md"));
+  else await (await import("node:fs/promises")).writeFile(join(inputRoot, "paper.md"), "# Imported TeX source\n\n" + (await Promise.all(paperFiles.filter((path) => path.endsWith(".tex")).map(async (path) => `## Source: ${relative(importRoot, path)}\n\n${await readFile(path, "utf8")}`))).join("\n"));
   for (const path of await files(sourceRoot)) await chmod(path, 0o444);
   const imported = await files(sourceRoot);
-  return { kind: "tex-directory", digest: await digest(imported, sourceRoot), source };
+  return { kind, digest: await digest(imported, sourceRoot), source };
 }
