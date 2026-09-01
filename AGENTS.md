@@ -25,7 +25,10 @@ bash scripts/test_install.sh
 for f in install.sh scripts/*.sh; do bash -n "$f" && echo "  ✓ $f" || echo "  ✗ $f"; done
 
 # AST-check Python files (no formal linter configured):
-python3 -c "import ast; [ast.parse(open(f).read()) for f in ['mcp-server/osp_mcp.py','scripts/sync_adapters.py','scripts/merge_mcp_config.py','scripts/test_parity.py']]"
+python3 -c "import ast; [ast.parse(open(f).read()) for f in ['mcp-server/osp_mcp.py','scripts/sync_adapters.py','scripts/merge_mcp_config.py','scripts/test_parity.py','scripts/build_cli_assets.py','osp_cli/runtime.py','osp_cli/cli.py']]"
+
+# Standalone CLI offline tests:
+python3 -m unittest tests/test_osp_cli.py
 
 # Run the MCP server standalone (debug mode):
 cd mcp-server && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/python osp_mcp.py
@@ -34,6 +37,11 @@ cd mcp-server && python3 -m venv .venv && .venv/bin/pip install -r requirements.
 ## Architecture (one paragraph)
 
 `extensions/_shared/` is the canonical source: 8 commands + 8 skills + rules + defaults + a manifest. `scripts/sync_adapters.py` regenerates 14 per-tool adapter directories under `extensions/.{claude,cursor,gemini,agent,agents,github,junie,kiro,codex,kimi,qwen,vibe,opencode,openhands}/`. Per-tool installers (`scripts/install_*.sh`) copy the adapter into the user's project, run `init_brain.sh` to scaffold `.brain/`, run `init_mcp.sh` to set up a self-contained Python venv at `.open-scholar-peer/mcp/`, and either auto-merge the MCP server into the tool's config (`merge_mcp_config.py`) or emit a paste-ready snippet for tools with TOML / global / non-standard configs. State during a review lives at `<user-project>/.brain/` (gitignored).
+
+`osp_cli/` adds a standalone OpenCode-native runner. It packages a generated
+OpenCode adapter bundle under `osp_cli/_assets/`; this bundle is never edited
+directly. After edits under `_shared/`, run `sync_adapters.py` and then
+`build_cli_assets.py` before testing or publishing the CLI.
 
 ## The Golden Rule
 

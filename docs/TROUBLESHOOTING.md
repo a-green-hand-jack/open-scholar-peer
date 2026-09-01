@@ -25,6 +25,31 @@ Inspect the log:
 ```
 Common causes: outdated pip (`pip install --upgrade pip` in the venv), missing system libs for `lxml` or `cryptography` (on Ubuntu: `sudo apt install build-essential libxml2-dev libxslt1-dev libssl-dev`).
 
+### `osp: command not found` after the standalone CLI installer
+
+The one-command CLI installer creates an isolated user-owned virtual environment
+and reports the command directory it selected. Add that reported directory (the
+default is shown below) to `PATH`, open a new shell, then confirm the runtime:
+
+```bash
+export PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:$PATH"
+osp doctor
+```
+
+If the installer cannot find `pip`, install Python 3.10+ with pip and retry.
+On Ubuntu/Debian, `sudo apt install python3-pip python3-venv` provides it.
+
+### `osp review` says Bubblewrap is required
+
+The standalone CLI isolates Linux runs with Bubblewrap. Install it, then retry:
+
+```bash
+sudo apt install bubblewrap
+osp doctor
+```
+
+`osp doctor` also checks that OpenCode and `pdftotext` are available.
+
 ### Installer wrote files but the AI tool doesn't see commands
 
 Reload the tool:

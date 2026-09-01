@@ -10,11 +10,25 @@ A community implementation of [**ScholarPeer**: A Context-Aware Multi-Agent Fram
 
 OSP turns the paper's 7-agent pipeline into a portable set of Skills, Slash Commands, and MCP tools that install into your project directory. Use your favorite AI tool to review papers.
 
+For an autonomous OpenCode-native standalone review, install the CLI and run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/a-green-hand-jack/open-scholar-peer/main/install_cli.sh | bash
+export PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:$PATH"
+osp review ./paper.pdf --output ./osp-review --mode autonomous --headless
+```
+
+The CLI accepts PDFs, TeX directories, source archives, and existing OSP
+workspaces. It creates an isolated timestamped run, preserves checkpoints, and
+exports `./osp-review/final_review.md`. See [`docs/OSP_CLI.md`](docs/OSP_CLI.md)
+for provider/model configuration, resume, validation, and provenance trails.
+
 ---
 
-## 🚀 Quickstart
+## 🚀 Quickstart: install an AI-tool adapter
 
-In CLI:
+To install OSP slash commands and MCP support into a project for an interactive
+AI tool, use the universal installer:
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/amirkiarafiei/open-scholar-peer/main/install.sh | bash
@@ -175,6 +189,9 @@ scripts/
 ├── init_mcp.sh        ← Sets up .open-scholar-peer/mcp/ with venv
 └── test_*.{py,sh}     ← Parity + install smoke tests
 
+osp_cli/               ← Standalone `osp` / `open-scholar-peer` CLI runtime
+└── _assets/           ← Generated package assets; never canonical source
+
 .brain/                ← Per-project state (gitignored)
 └── raw/, review/, input/, session.json
 
@@ -222,4 +239,3 @@ If you use OSP in research, please cite the upstream ScholarPeer paper. The impl
 - [Contributing](CONTRIBUTING.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [License](LICENSE)
-

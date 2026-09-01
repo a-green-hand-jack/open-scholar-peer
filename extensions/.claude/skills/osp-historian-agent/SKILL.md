@@ -34,7 +34,7 @@ Write **exactly one file**: `.brain/raw/03_domain_narrative.md`.
 
 ## Output
 
-### Era 1 — <name, e.g. "Pre-Transformer (2014-2017)"> 
+### Era 1 — <name, e.g. "Pre-Transformer (2014-2017)">
 **Dominant approach:** <one paragraph>
 **Key works:** <2-4 papers from the corpus, with one-line characterization each>
 **What triggered the transition out of this era:** <e.g. "Vaswani et al. 2017 demonstrated parallelizable attention outperformed RNNs at scale">

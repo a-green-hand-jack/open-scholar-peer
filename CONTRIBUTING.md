@@ -10,6 +10,10 @@ The full contribution guide lives in [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md
 - Regenerate adapters with `python3 scripts/sync_adapters.py`
 - Verify parity with `python3 scripts/test_parity.py`
 - Smoke-test installers with `bash scripts/test_install.sh`
+- For standalone CLI changes, update `osp_cli/` and `docs/OSP_CLI.md`, then run
+  `python3 -m unittest tests/test_osp_cli.py`
+- Never edit `osp_cli/_assets/` directly; regenerate it with
+  `python3 scripts/build_cli_assets.py`
 
 ## Before opening a pull request
 
@@ -17,4 +21,3 @@ The full contribution guide lives in [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md
 - Review the [license](LICENSE)
 - Follow the checklist in [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
 - Update docs when behavior changes
-

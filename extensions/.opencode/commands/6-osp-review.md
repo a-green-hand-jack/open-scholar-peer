@@ -15,7 +15,7 @@ Invoke the `osp-reviewer-agent` skill.
 ## Prerequisites
 
 - All earlier phases completed: `summary`, `literature`, `historian`, `baseline_scout`, `qa`.
-- All `05_qa_<slug>.md` files exist with 10 pairs each.
+- All `05_qa_<slug>.md` files exist with exactly `session.json.qa_pairs_per_criterion` pairs each.
 
 ## Steps
 
