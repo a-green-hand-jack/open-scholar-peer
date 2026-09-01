@@ -11,12 +11,13 @@ import { now, writeJsonAtomic } from "./fs.js";
 import { initialPhases, RunStateSchema } from "./state.js";
 import { PHASES } from "./phases.js";
 import { validateRun } from "./validation.js";
+import { ReviewController } from "./controller.js";
 
 const program = new Command();
 program.name("osp").description("OpenCode-native Open ScholarPeer review agent").version("2.0.0");
 
 function repoRoot(): string {
-  return resolve(fileURLToPath(new URL("..", import.meta.url)), "..");
+  return resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 }
 
 async function prepare(source: string, output: string, mode: "autonomous" | "collaborative"): Promise<string> {
@@ -54,12 +55,16 @@ program.command("review <source>")
   .option("--mode <mode>", "autonomous or collaborative", "autonomous")
   .option("--headless", "run without attaching the TUI")
   .option("--prepare-only", "prepare and validate input without invoking OpenCode")
-  .action(async (source: string, options: { output: string; mode: "autonomous" | "collaborative"; prepareOnly?: boolean }) => {
+  .option("--model <model>", "provider/model reference")
+  .option("--variant <variant>", "OpenCode model variant")
+  .option("--timeout <seconds>", "phase timeout", "1800")
+  .action(async (source: string, options: { output: string; mode: "autonomous" | "collaborative"; headless?: boolean; prepareOnly?: boolean; model?: string; variant?: string; timeout: string }) => {
     if (!["autonomous", "collaborative"].includes(options.mode)) throw new Error("--mode must be autonomous or collaborative");
     const runDir = await prepare(source, options.output, options.mode);
     console.log(`Prepared OSP review workspace: ${runDir}`);
     if (options.prepareOnly) return;
-    console.log("OpenCode controller execution will be started in the next runtime stage. Use --prepare-only for offline preparation.");
+    await new ReviewController({ workspace: runDir, mode: options.mode, headless: Boolean(options.headless), model: options.model, variant: options.variant, timeoutMs: Number(options.timeout) * 1000 }).run();
+    console.log(`Review complete: ${join(runDir, ".brain", "review", "final_review.md")}`);
   });
 
 program.command("status <run>").option("--json").action(async (run: string, options: { json?: boolean }) => {
@@ -78,6 +83,16 @@ program.command("validate <run>").option("--json").action(async (run: string, op
 program.command("checkpoint <run>").action(async (run: string) => {
   const state = JSON.parse(await readFile(join(resolve(run), ".osp-run", "run.json"), "utf8"));
   console.log(await checkpoint(resolve(run), state.run_id, state.current_phase ?? "prepared", "manual"));
+});
+
+program.command("approve <run>").action(async (run: string) => {
+  const path = join(resolve(run), ".osp-run", "run.json");
+  const state = JSON.parse(await readFile(path, "utf8"));
+  if (state.status !== "gate_waiting") throw new Error(`run is not waiting for approval (status=${state.status})`);
+  state.status = "prepared";
+  state.updated_at = now();
+  await writeJsonAtomic(path, state);
+  console.log(`Approved gate for ${state.current_phase}`);
 });
 
 program.command("doctor").action(async () => {
