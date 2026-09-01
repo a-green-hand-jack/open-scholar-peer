@@ -36,7 +36,7 @@ export class ReviewController {
       state.final_review = join(this.options.workspace, ".brain", "review", "final_review.md");
       await writeJsonAtomic(join(this.options.workspace, ".osp-run", "run.json"), state);
       await checkpoint(this.options.workspace, state.run_id, "completed", "completed", this.sessionId);
-      if (tui) { await new Promise((resolve) => setTimeout(resolve, 1500)); tui.process.kill("SIGTERM"); }
+      if (tui) { await new Promise((resolve) => setTimeout(resolve, 1500)); tui.process.kill("SIGTERM"); await tui.exited; }
     } catch (error) {
       const state = await this.state();
       state.status = "failed";

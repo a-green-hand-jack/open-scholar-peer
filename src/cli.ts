@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { execa } from "execa";
 import { checkpoint, git, initGit } from "./checkpoints.js";
 import { digest, importSource, importedFiles } from "./input.js";
-import { now, sha256, writeJsonAtomic } from "./fs.js";
+import { now, writeJsonAtomic } from "./fs.js";
 import { initialPhases, RunStateSchema } from "./state.js";
 import { PHASES } from "./phases.js";
 import { validateRun } from "./validation.js";
@@ -52,7 +52,7 @@ async function verifyRun(workspace: string): Promise<any> {
   const manifest = JSON.parse(await readFile(join(workspace, ".osp-run", "source-manifest.json"), "utf8")) as { digest: string };
   const sourceFiles = await importedFiles(join(workspace, "source"));
   if (await digest(sourceFiles, join(workspace, "source")) !== manifest.digest) throw new Error("imported source changed since the last checkpoint; resume is refused");
-  const scopeDigest = sha256(JSON.stringify(state.scope));
+  const scopeDigest = createHash("sha256").update(JSON.stringify(state.scope)).digest("hex");
   if (scopeDigest !== state.scope_digest) throw new Error("run scope changed since creation; resume is refused");
   return state;
 }

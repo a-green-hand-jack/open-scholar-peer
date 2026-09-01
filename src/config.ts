@@ -2,6 +2,7 @@ import { mkdir, cp, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { execa } from "execa";
 
 function projectRoot(): string {
   return resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -17,7 +18,15 @@ export async function installRuntimeAssets(workspace: string, networkPolicy: "on
   const mcpRoot = join(workspace, ".open-scholar-peer", "mcp");
   await mkdir(mcpRoot, { recursive: true });
   await cp(join(root, "mcp-server"), mcpRoot, { recursive: true });
-  const python = process.env.PYTHON ?? "python3";
+  const pythonBase = process.env.PYTHON ?? "python3";
+  const venv = join(mcpRoot, ".venv");
+  const python = join(venv, "bin", "python");
+  try {
+    await execa(pythonBase, ["-m", "venv", venv]);
+    await execa(python, ["-m", "pip", "install", "--quiet", "-r", join(mcpRoot, "requirements.txt")]);
+  } catch (error) {
+    throw new Error(`could not prepare isolated MCP runtime: ${error instanceof Error ? error.message : String(error)}`);
+  }
   const config = {
     $schema: "https://opencode.ai/config.json",
     share: "disabled",
