@@ -7,10 +7,32 @@ adapter generation under `extensions/_shared/`.
 
 ## Install
 
-From a source checkout:
+One-command installation from GitHub:
 
 ```bash
-python3 -m pip install --user .
+curl -fsSL https://raw.githubusercontent.com/a-green-hand-jack/open-scholar-peer/main/install_cli.sh | bash
+```
+
+The script downloads the selected revision, finds Python 3.10+ with `pip` and
+`venv`, and
+installs both `osp` and `open-scholar-peer` into an isolated user-owned virtual
+environment. Set `OSP_REPOSITORY=owner/repo` or `OSP_REF=branch-or-commit`
+before the command to use a fork, non-main branch, or reviewed commit. Set
+`OSP_INSTALL_DIR` or `OSP_BIN_DIR` to choose the venv and command locations.
+The installer runs `osp doctor` using the installed path. For the default
+command location, add it to your shell `PATH` before invoking `osp` yourself:
+
+```bash
+export PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:$PATH"
+osp doctor
+```
+
+From a source checkout, install the checked-out revision instead:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install .
+.venv/bin/osp doctor
 ```
 
 This installs both `osp` and `open-scholar-peer` command names. The wheel
@@ -21,6 +43,9 @@ canonical adapter content:
 python3 scripts/sync_adapters.py
 python3 scripts/build_cli_assets.py
 ```
+
+On Linux, reviews require Bubblewrap (`bwrap`) for filesystem isolation. The
+CLI also requires OpenCode 1.18.0 or newer.
 
 ## Review
 
@@ -54,11 +79,14 @@ recorded in the locked run scope for auditable retrieval behavior.
 
 ```bash
 osp doctor
-osp status ./osp-review/osp-20260901T120000Z-abc123
-osp validate ./osp-review/osp-20260901T120000Z-abc123
-osp checkpoint ./osp-review/osp-20260901T120000Z-abc123
-osp resume ./osp-review/osp-20260901T120000Z-abc123
+osp status ./osp-review
+osp validate ./osp-review
+osp checkpoint ./osp-review
+osp resume ./osp-review
 ```
+
+When the output directory contains more than one run, pass the full printed run
+directory instead of its parent.
 
 `resume` refuses a run whose locked input digest or invocation scope has
 changed. It resumes from the first incomplete/invalid phase and retains logs,

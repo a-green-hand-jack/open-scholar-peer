@@ -13,18 +13,22 @@ OSP turns the paper's 7-agent pipeline into a portable set of Skills, Slash Comm
 For an autonomous OpenCode-native standalone review, install the CLI and run:
 
 ```bash
-python3 -m pip install --user .
+curl -fsSL https://raw.githubusercontent.com/a-green-hand-jack/open-scholar-peer/main/install_cli.sh | bash
+export PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:$PATH"
 osp review ./paper.pdf --output ./osp-review --mode autonomous --headless
 ```
 
-See [`docs/OSP_CLI.md`](docs/OSP_CLI.md) for input formats, checkpoints,
-provenance, resume, and provider/model configuration.
+The CLI accepts PDFs, TeX directories, source archives, and existing OSP
+workspaces. It creates an isolated timestamped run, preserves checkpoints, and
+exports `./osp-review/final_review.md`. See [`docs/OSP_CLI.md`](docs/OSP_CLI.md)
+for provider/model configuration, resume, validation, and provenance trails.
 
 ---
 
-## 🚀 Quickstart
+## 🚀 Quickstart: install an AI-tool adapter
 
-In CLI:
+To install OSP slash commands and MCP support into a project for an interactive
+AI tool, use the universal installer:
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/amirkiarafiei/open-scholar-peer/main/install.sh | bash

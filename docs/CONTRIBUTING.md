@@ -24,6 +24,44 @@ python3 scripts/test_parity.py
 bash scripts/test_install.sh
 ```
 
+When that canonical change must also reach the standalone CLI, rebuild its
+packaged adapter bundle before testing or committing:
+
+```bash
+python3 scripts/build_cli_assets.py
+python3 -m unittest tests/test_osp_cli.py
+```
+
+`osp_cli/_assets/` is generated package content. Never edit it directly.
+
+## Path 0: Contribute to the standalone CLI
+
+The standalone `osp` / `open-scholar-peer` runner lives in `osp_cli/` and is
+distributed through `pyproject.toml`. Keep its behavior aligned with the
+canonical OSP artifacts rather than duplicating prompts or defaults in Python.
+
+- `osp_cli/cli.py` defines the public command-line interface.
+- `osp_cli/runtime.py` owns isolated imports, OpenCode execution, checkpoints,
+  resume, validation, and final export.
+- `install_cli.sh` is the GitHub one-command bootstrapper. It must remain safe
+  to execute via `curl | bash`: download a selected public revision, install no
+  credentials, and leave no source checkout behind. A branch URL is mutable, so
+  users who need an immutable bootstrap should pin both the raw-script URL and
+  `OSP_REF` to a reviewed commit.
+- `scripts/build_cli_assets.py` packages the generated OpenCode adapter,
+  `.brain` template, and MCP server for wheels.
+
+For CLI changes, run:
+
+```bash
+python3 -m unittest tests/test_osp_cli.py
+python3 scripts/test_parity.py
+python3 scripts/build_cli_assets.py
+python3 -m venv .venv
+.venv/bin/pip install .
+.venv/bin/osp doctor
+```
+
 ---
 
 ## Path 1: Modify or add a slash command
@@ -157,6 +195,9 @@ Before submitting:
 - [ ] If you added a command, skill, or default — `MANIFEST.md` and `ARTIFACT_CONTRACTS.md` are updated.
 - [ ] If you added an MCP provider — `mcp-server/README.md` documents the new tool with rich docstrings.
 - [ ] If user-visible behavior changed — `docs/KNOWN_LIMITATIONS.md` and/or `docs/TROUBLESHOOTING.md` are updated.
+- [ ] If standalone CLI behavior changed — `docs/OSP_CLI.md`, `README.md`, and
+  `CONTRIBUTING.md` describe the change; packaged assets were rebuilt and CLI
+  tests pass.
 - [ ] PR description explains the WHY, not just the WHAT.
 
 ---
