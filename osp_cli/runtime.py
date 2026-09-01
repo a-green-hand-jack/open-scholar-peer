@@ -56,9 +56,6 @@ PHASE_OUTPUTS = {
     "qa": (),
     "review": (".brain/review/final_review.md",),
 }
-OTHER_OUTPUTS = {
-    "literature_extraction": "02_lkm_paper_extraction.md",
-}
 ARTIFACT_HEADINGS = ("## Method", "## Output", "## Provenance")
 RUNTIME_DIR = ".osp-run"
 SENSITIVE_SOURCE_NAME = re.compile(
@@ -643,12 +640,6 @@ class OSPRun:
         return result
 
     def _expected_outputs(self, phase: str) -> list[Path]:
-        if phase == "literature":
-            # Optional LKM paper-extraction artifact written on the first
-            # invocation for query seeding (02_lkm_paper_extraction.md).
-            return [self.run_dir / path for path in PHASE_OUTPUTS[phase]] + [
-                self.run_dir / ".brain" / "raw" / OTHER_OUTPUTS["literature_extraction"]
-            ]
         if phase != "qa":
             return [self.run_dir / path for path in PHASE_OUTPUTS[phase]]
         criteria = read_json(self.session_path).get("qa_criteria", [])
