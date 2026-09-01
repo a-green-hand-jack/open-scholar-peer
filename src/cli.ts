@@ -6,8 +6,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { execa } from "execa";
 import { checkpoint, git, initGit } from "./checkpoints.js";
-import { importSource } from "./input.js";
-import { now, writeJsonAtomic } from "./fs.js";
+import { digest, importSource, importedFiles } from "./input.js";
+import { now, sha256, writeJsonAtomic } from "./fs.js";
 import { initialPhases, RunStateSchema } from "./state.js";
 import { PHASES } from "./phases.js";
 import { validateRun } from "./validation.js";
@@ -47,6 +47,16 @@ async function prepare(source: string, output: string, mode: "autonomous" | "col
   return runDir;
 }
 
+async function verifyRun(workspace: string): Promise<any> {
+  const state = RunStateSchema.parse(JSON.parse(await readFile(join(workspace, ".osp-run", "run.json"), "utf8")));
+  const manifest = JSON.parse(await readFile(join(workspace, ".osp-run", "source-manifest.json"), "utf8")) as { digest: string };
+  const sourceFiles = await importedFiles(join(workspace, "source"));
+  if (await digest(sourceFiles, join(workspace, "source")) !== manifest.digest) throw new Error("imported source changed since the last checkpoint; resume is refused");
+  const scopeDigest = sha256(JSON.stringify(state.scope));
+  if (scopeDigest !== state.scope_digest) throw new Error("run scope changed since creation; resume is refused");
+  return state;
+}
+
 program.command("review <source>")
   .option("-o, --output <directory>", "parent directory for review workspaces", "osp-review")
   .option("--mode <mode>", "autonomous or collaborative", "autonomous")
@@ -83,6 +93,16 @@ program.command("checkpoint <run>").action(async (run: string) => {
   const state = JSON.parse(await readFile(join(resolve(run), ".osp-run", "run.json"), "utf8"));
   console.log(await checkpoint(resolve(run), state.run_id, state.current_phase ?? "prepared", "manual"));
 });
+
+for (const commandName of ["start", "resume"]) {
+  program.command(`${commandName} <run>`).option("--headless").option("--timeout <seconds>", "phase timeout", "1800").action(async (run: string, options: { headless?: boolean; timeout: string }) => {
+    const workspace = resolve(run);
+    const state = await verifyRun(workspace);
+    if (state.status === "completed") { console.log("Review is already completed."); return; }
+    await new ReviewController({ workspace, mode: state.mode, headless: Boolean(options.headless), model: state.scope.model ?? undefined, variant: state.scope.variant ?? undefined, timeoutMs: Number(options.timeout) * 1000 }).run();
+    console.log(`Review complete: ${join(workspace, ".brain", "review", "final_review.md")}`);
+  });
+}
 
 program.command("approve <run>").action(async (run: string) => {
   const path = join(resolve(run), ".osp-run", "run.json");
