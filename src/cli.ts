@@ -30,7 +30,7 @@ async function prepare(source: string, output: string, mode: "autonomous" | "col
   await mkdir(join(runDir, ".brain", "review"), { recursive: true });
   await mkdir(join(runDir, ".brain", "tmp"), { recursive: true });
   await cp(join(repoRoot(), ".brain-template", "session.json"), join(runDir, ".brain", "session.json"));
-  await installRuntimeAssets(runDir, networkPolicy);
+  await installRuntimeAssets(runDir, networkPolicy, mode);
   await writeFile(join(runDir, "AGENTS.md"), "# Open ScholarPeer Review Workspace\n\nFollow `.opencode/AGENTS.md`. Execute only the controller-selected phase. Never modify `source/`.\n", "utf8");
   const imported = await importSource(sourcePath, runDir);
   const scope = { workflow: [...PHASES], mode, network_policy: networkPolicy, model: model ?? null, variant: variant ?? null, input_digest: imported.digest, source_kind: imported.kind };
