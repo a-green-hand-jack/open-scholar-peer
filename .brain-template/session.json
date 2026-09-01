@@ -31,7 +31,8 @@
     "review":         { "status": "pending", "started_at": "", "completed_at": "", "notes": "" }
   },
   "mcp": {
-    "semantic_scholar_api_key_present": false
+    "semantic_scholar_api_key_present": false,
+    "bohrium_available": false
   },
   "resume_from": "onboarding",
   "notes": ""

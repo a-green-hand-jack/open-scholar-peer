@@ -20,15 +20,17 @@ Invoke the `osp-literature-review-agent` skill.
 
 ## Resource notice
 
-⚠️ Each invocation makes ~8-12 API calls across 3 databases (arXiv, Semantic Scholar, Google Scholar). Expect 1-3 minutes per round.
+⚠️ Each invocation makes ~8-12 API calls across the retrieval tools (Bohrium LKM, arXiv, Semantic Scholar; native web search where available). Expect ~1-2 minutes per round. Bohrium LKM is the primary broad-coverage source (~3 s/call, fixed-price 0.05 CNY each, personal monthly 1,000-call free quota) — Google Scholar is used only as fallback when LKM is unavailable.
 
 ## Round definitions
 
-| # | Anchor | Goal |
-|---|--------|------|
-| 1 | `sub-domain-anchor` | Search using the paper's stated sub-domain and primary keywords |
-| 2 | `method-anchor` | Search using the method's name and key technical terms |
-| 3 | `temporal-expansion` | Filter to last 12 months; include arXiv pre-prints, concurrent submissions |
+| # | Anchor | Goal | Primary LKM tools |
+|---|--------|------|-------------------|
+| 1 | `sub-domain-anchor` | Search using the paper's stated sub-domain and primary keywords | `search_bohrium_lkm` (scopes conclusion,abstract) + `search_bohrium_paper` |
+| 2 | `method-anchor` | Search using the method's name and key technical terms | `search_bohrium_reasoning` + `search_bohrium_lkm` (method terms) + `get_bohrium_paper_graph` on top hit |
+| 3 | `temporal-expansion` | Filter to last 12 months; include arXiv pre-prints, concurrent submissions | `search_bohrium_paper` (year_from/year_to = last 12 months) + `search_arxiv` (date-sorted) |
+
+Google Scholar (`search_google_scholar*`) participates ONLY when `session.json.mcp.bohrium_available` is `false` or the LKM tools return `{"error": ...}`.
 
 ## Steps
 
@@ -39,10 +41,17 @@ Invoke the `osp-literature-review-agent` skill.
 
 2. Read `.brain/raw/01_structured_summary.md`.
 
+2.5. **Optional — LKM paper extraction (query seeding, first invocation only):**
+   - Only when `rounds_completed == 0` and the original paper is a PDF at `.brain/input/` (use `session.json.paper.path`), and `.brain/raw/02_lkm_paper_extraction.md` does not yet exist.
+   - Flow: `osp-mcp.submit_bohrium_pdf(<pdf path>)` → bounded `osp-mcp.wait_bohrium_parse_task` (repeat as needed; wait timeout is not a failure) → `osp-mcp.get_bohrium_parse_result(task_id)` after terminal `succeeded`.
+   - Write `.brain/raw/02_lkm_paper_extraction.md` (universal Method / Output / Provenance): Output = addressed problems, open questions, key conclusions of the paper; Provenance = pdf path, task id, `cache_hit`, result cost.
+   - **Best-effort only.** If submit fails (paper > 50 pages, > 64 MiB, bohr unavailable, budget), skip and note it in `phases.literature.notes` — never block the rounds on this.
+   - On later invocations, read the extraction file if present and use it as a query seed source.
+
 3. Run the **next pending round only**:
    - Activate the `osp-literature-review-agent` skill for that round.
-   - The skill searches using **all available retrieval tools** (`search_arxiv`, `search_semantic_scholar`,
-     `search_google_scholar`, native Web Search) with **different query formulations**.
+   - The skill searches using **all available retrieval tools** (`search_bohrium_lkm`, `search_bohrium_reasoning`, `search_bohrium_paper`, `search_arxiv`, `search_semantic_scholar`; Google Scholar only as fallback) with **different query formulations**.
+   - When `02_lkm_paper_extraction.md` exists, the round's query formulation derives at least one query from the paper's own open questions / conclusions.
    - Write the round file (`02a`, `02b`, or `02c`) using the template at `defaults/round_strategy_template.md`.
 
 4. Update `session.json`:

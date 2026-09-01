@@ -47,9 +47,11 @@ The literature step writes **three separate files** to make the 3-round expansio
 | `02b_literature_round2.md` | `method-anchor` | Search using the proposed method's name and technical terms. Goal: find prior work using similar techniques. |
 | `02c_literature_round3.md` | `temporal-expansion` | Search filtered to last 12 months + concurrent work + arXiv pre-prints + workshop papers. Goal: catch what static knowledge cutoffs miss. |
 
-Each round must use **all available retrieval tools** (osp-mcp arxiv/semantic_scholar/google_scholar + native Web Search) with **different query formulations** per round. Queries used are listed in each round's `## Provenance`.
+Each round must use **all available retrieval tools with different query formulations** per round. Primary broad-coverage source is Bohrium LKM (`search_bohrium_lkm`, plus `search_bohrium_reasoning` for round 2 and `search_bohrium_paper` for round 3); supporting tools are arXiv and Semantic Scholar; Google Scholar (`search_google_scholar*`) is used **only as fallback** when `session.json.mcp.bohrium_available` is `false` or the LKM tools return an error. LKM calls are fixed-price (0.05 CNY each, personal monthly 1,000-call quota) — keep one bounded call per query, never page automatically. Queries used are listed in each round's `## Provenance`.
 
 After all three rounds, the agent writes `02_retrieved_literature.md` consolidating retained papers (deduplicated), with one entry per paper: title, authors, year, venue, abstract, source(s) it appeared in.
+
+**Optional side artifact — `02_lkm_paper_extraction.md`.** On the first literature invocation, the agent MAY submit the paper-under-review PDF to Bohrium LKM (`submit_bohrium_pdf` → bounded `wait_bohrium_parse_task` → `get_bohrium_parse_result`) and store the extraction (addressed problems, open questions, conclusions) here. It is best-effort: a paper beyond LKM's limits (64 MiB / 50 pages) or a missing `bohr` CLI skips it without blocking the rounds. When present, each round must seed at least one query from its open questions / conclusions. Result pricing: 1.00 CNY first time (0.10 CNY on cache hit).
 
 ## Q&A contract for `/5-osp-qa`
 

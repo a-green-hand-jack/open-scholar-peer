@@ -89,13 +89,25 @@ mv .brain .brain.archive-$(date +%F)
 
 **Limitation:** Subject to Google's rate limits and HTML structure changes. Results may be empty or stale during heavy usage.
 
-**Impact:** The Literature Agent and Baseline Scout still have arXiv and Semantic Scholar as primary sources; Google Scholar adds breadth (blog posts, theses, workshop papers) but isn't load-bearing.
+**Impact:** Google Scholar is now the **fallback** broad-coverage source. The Literature Agent and Baseline Scout use Bohrium LKM as the primary broad-coverage source; Google Scholar is only consulted when the `bohr` CLI is unavailable or returns errors.
 
-**Workaround:** None needed unless Google Scholar is your primary source, in which case consider running searches at off-peak times.
+**Workaround:** Install the Bohrium LKM CLI (`npm i -g @dptech-corp/bohr-cli && bohr auth login`) to keep the fast LKM path enabled.
 
 ---
 
-## 7. Hyperparameters are structurally enforced, not numerically configurable
+## 7. Bohrium LKM requires the `bohr` CLI and its own login
+
+**What:** The `osp_mcp.search_bohrium_*` and `get_bohrium_paper_graph` tools shell out to the official `bohr` CLI. They do not embed or read any credential — the CLI stores its own login from `bohr auth login`.
+
+**Limitation:** If `bohr` is missing from PATH, or the login is missing/expired, the LKM tools return `{"error": ...}` and OSP falls back to Google Scholar. Session state records this as `session.json.mcp.bohrium_available`.
+
+**Impact:** Users who skip the CLI install get the slower Google Scholar path; no silent breakage (fallback is explicit in the prompts).
+
+**Workaround:** `npm i -g @dptech-corp/bohr-cli` then `bohr auth login`. LKM calls are fixed-price (0.05 CNY each, covered first by the personal monthly 1,000-call quota, Asia/Shanghai calendar month); OSP never pages through results automatically.
+
+---
+
+## 8. Hyperparameters are structurally enforced, not numerically configurable
 
 **What:** The paper specifies `k=3` literature rounds and `N_QA=10` probing pairs per criterion. OSP enforces `k=3` via file structure (3 separate round files). `N_QA` is **user-configurable** at the start of `/5-osp-qa` — the default is 2 pairs per criterion (lighter cost; the user can choose any N at runtime, and the template renders `### Q1`…`### QN` accordingly). The choice persists in `session.json.qa_pairs_per_criterion`.
 
@@ -107,7 +119,7 @@ mv .brain .brain.archive-$(date +%F)
 
 ---
 
-## 8. Re-running an earlier phase invalidates downstream artifacts
+## 9. Re-running an earlier phase invalidates downstream artifacts
 
 **What:** OSP commands are idempotent (re-running overwrites their own artifact with a warning), but they do **not** automatically invalidate downstream artifacts.
 

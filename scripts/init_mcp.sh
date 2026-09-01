@@ -126,6 +126,17 @@ if [[ -z "$SEMANTIC_SCHOLAR_API_KEY" ]]; then
   echo "     Then add to your shell profile: export SEMANTIC_SCHOLAR_API_KEY=sk-..."
 fi
 
+# Optional: detect Bohrium LKM CLI (primary literature retrieval source)
+if command -v bohr &>/dev/null; then
+  echo -e "  ${GREEN}✅ Bohrium LKM CLI (bohr) detected — LKM-first literature retrieval enabled${NC}"
+else
+  echo ""
+  echo -e "  ${YELLOW}ℹ️  bohr CLI not found — Google Scholar will be used as literature fallback.${NC}"
+  echo "     Install: npm i -g @dptech-corp/bohr-cli"
+  echo "     Then:    bohr auth login"
+  echo "     LKM searches are 0.05 CNY each (first 1,000 calls/month free)."
+fi
+
 # Create .env at project root if it doesn't exist (for API keys + tunables)
 ENV_FILE="./.env"
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -143,9 +154,9 @@ if [[ ! -f "$ENV_FILE" ]]; then
 # --- Tunables ---------------------------------------------------------------
 
 # Per-tool-call timeout in seconds. Applies uniformly to arXiv,
-# Semantic Scholar, and Google Scholar requests. Bump higher if you
-# routinely see TimeoutError on slow networks; lower if you'd rather
-# fail fast. Default: 90.
+# Semantic Scholar, and Google Scholar requests (Bohrium LKM has its own
+# 30s internal cap inside the provider). Bump higher if you routinely see
+# TimeoutError on slow networks; lower if you'd rather fail fast. Default: 90.
 # OSP_CALL_TIMEOUT=90
 ENVEOF
   echo -e "  ${GREEN}✅ Created .env at project root — add your API keys there${NC}"

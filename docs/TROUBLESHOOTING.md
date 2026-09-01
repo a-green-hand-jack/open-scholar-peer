@@ -132,6 +132,19 @@ export SEMANTIC_SCHOLAR_API_KEY=sk-...
 ```
 Add to your shell profile (`~/.zshrc`, `~/.bashrc`) so it persists across sessions. Restart your AI tool to pick up the new env var.
 
+### Bohrium LKM tools return `{"error": ...}`
+
+The `search_bohrium_*` / `get_bohrium_paper_graph` tools shell out to the `bohr` CLI, which stores its own login. Check:
+- `command -v bohr` — if missing, install: `npm i -g @dptech-corp/bohr-cli`
+- `bohr auth status` — must show `logged_in: true`; otherwise run `bohr auth login`
+- `bohr billing pricing --resource lkm` — verify quota / per-call cost (0.05 CNY per call; personal monthly 1,000-call quota in Asia/Shanghai).
+
+When LKM is unavailable, `/2-osp-literature` automatically falls back to `search_google_scholar` (slower, best-effort). Session state records availability in `session.json.mcp.bohrium_available`.
+
+### `submit_bohrium_pdf` fails or the parse task never finishes
+
+The LKM PDF parser accepts non-empty regular PDFs up to 64 MiB and 50 pages; longer papers fail at submit and the literature phase proceeds without the extraction (it is optional). Parse tasks run asynchronously — `wait_bohrium_parse_task` returns `status: "running"` on timeout, which is not a failure; call it again or poll `check_bohrium_parse_task`. `partial` is a non-retryable terminal state for papers that cannot produce a complete graph (do not resubmit); `failed` is technical and the PDF may be resubmitted.
+
 ### `osp` server starts but tools return errors
 
 Each tool has consistent error envelopes. Look for entries like `[{"error": "..."}]` in the AI tool's output and check:
@@ -173,7 +186,7 @@ This creates the v2 schema. Then re-run `/0-osp-onboarding`.
 
 ### Re-ran `/1-osp-summary` and now my final review feels stale
 
-OSP does not auto-invalidate downstream artifacts (see `KNOWN_LIMITATIONS.md` §8). Re-run `/2-osp-literature` … `/6-osp-review` in order, or use `/open-scholar-peer` and follow its dispatcher.
+OSP does not auto-invalidate downstream artifacts (see `KNOWN_LIMITATIONS.md` §9). Re-run `/2-osp-literature` … `/6-osp-review` in order, or use `/open-scholar-peer` and follow its dispatcher.
 
 ---
 

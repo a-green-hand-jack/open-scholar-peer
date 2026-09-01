@@ -115,12 +115,14 @@ Or just run `/open-scholar-peer` at any time — it reads your session state and
 
 ## Literature Databases
 
-OSP currently connects to arXiv and Semantic Scholar for paper discovery and evidence gathering.
+OSP discovers papers and evidence through Bohrium LKM (primary broad-coverage source), arXiv, and Semantic Scholar. Google Scholar is kept as a fallback only when the Bohrium LKM CLI (`bohr`) is unavailable.
 
 | Database | Support | API Key |
 | --- | --- | --- |
+| Bohrium LKM | ✅ (primary) | `bohr` CLI login (no key needed in OSP) |
 | arXiv | ✅ | Not Required |
 | Semantic Scholar | ✅ | Optional |
+| Google Scholar | ✅ (fallback only) | Not Required |
 | PubMed | 🚧 Soon | Not Required |
 | bioRxiv | 🚧 Soon | Not Required |
 | medRxiv | 🚧 Soon | Not Required |
@@ -133,6 +135,17 @@ OSP currently connects to arXiv and Semantic Scholar for paper discovery and evi
 | ScienceDirect | 🚧 Soon | Required |
 
 The literature search layers is implemented in [mcp-server/](mcp-server/), so you can extend it with additional scholarly sources when you have valid access credentials.
+
+### Bohrium LKM (primary literature source)
+
+Bohrium's Large Knowledge Model provides fast (~3 s) semantic + keyword search over scientific claims, abstracts, conclusions, and reasoning chains. OSP calls it through the official `bohr` CLI (no API key handling inside OSP):
+
+```bash
+npm i -g @dptech-corp/bohr-cli
+bohr auth login
+```
+
+Calls are fixed-price (LKM searches 0.05 CNY each; the personal monthly 1,000-call quota covers the first calls of each month, Asia/Shanghai calendar month). When `bohr` is not installed or not logged in, the Literature agent falls back to the Google Scholar tools.
 
 ### 🔑 API keys
 
