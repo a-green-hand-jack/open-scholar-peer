@@ -701,7 +701,14 @@ class OSPRun:
             if absent:
                 return False, f"{artifact.relative_to(self.run_dir)} missing {', '.join(absent)}"
             for heading in ARTIFACT_HEADINGS:
-                section = content.split(heading, 1)[1].split("## ", 1)[0].strip()
+                after = content.split(heading, 1)[1]
+                if phase == "review" and heading == "## Output":
+                    # The venue-formatted review document (## Summary…## What was
+                    # not checked) lives inside ## Output, so the section ends
+                    # at the closing ## Provenance heading, not the next ## .
+                    section = after.split("## Provenance", 1)[0].strip()
+                else:
+                    section = after.split("## ", 1)[0].strip()
                 if not section:
                     return False, f"{artifact.relative_to(self.run_dir)} has empty {heading[3:]} section"
             if "{{" in content or "}}" in content:
@@ -951,13 +958,21 @@ class OSPRun:
     def _phase_prompt(self, phase: str, options: RunOptions, literature_round: int | None = None) -> str:
         command = COMMANDS[phase]
         final_structure = " For the final review, preserve the venue-formatted review inside `## Output` and wrap it in the mandatory top-level `## Method`, `## Output`, and `## Provenance` sections." if phase == "review" else ""
-        if phase == "qa":
+        if phase == "onboarding":
+            required_hint = "Write `.brain/raw/00_review_guidelines.md`, populate `session.json.qa_criteria`, and scaffold one empty `05_qa_<slug>.md` per criterion under `.brain/raw/`."
+        elif phase == "review":
+            required_hint = ("Inside `## Output`, use top-level `## ` headings exactly: "
+                             "`## Summary`, `## Strengths`, `## Weaknesses`, `## Dimension Scores`, "
+                             "`## Recommendation`, `## What was not checked`, plus the `| Dimension | Score |` table.")
+        elif phase == "qa":
             required_hint = "Write exactly one `05_qa_<slug>.md` per criterion under `.brain/raw/`."
         elif phase == "literature" and literature_round:
             round_artifact = PHASE_OUTPUTS["literature"][literature_round - 1]
             required_hint = f"Write exactly this round's artifact: `{round_artifact}`."
         else:
             required_hint = "Write exactly these artifacts: " + ", ".join(f"`{path}`" for path in PHASE_OUTPUTS[phase]) + "."
+        if phase != "review":
+            required_hint += " Every `.brain/raw/` artifact you write must contain the universal `## Method`, `## Output`, and `## Provenance` sections."
         return f"""Execute only OSP phase `{phase}` by following `/{command}` in this isolated workspace. You are the file-capable primary executor: perform all required reads and writes yourself in this turn. Do not delegate the phase to a subagent or merely describe the work.
 
 This is an autonomous, report-only peer-review run. Do not modify `source/` or invent paper facts. Read `.brain/session.json` and obey the installed OSP artifact contract. {required_hint} {f'This is literature round {literature_round} of 3: execute exactly that round; only consolidate and mark the literature phase completed after round 3.' if literature_round else 'Complete the phase fully and update only the corresponding session phase to completed.'}{final_structure} Do not advance to another phase. Unknown evidence must be labeled unresolved or not assessable.
