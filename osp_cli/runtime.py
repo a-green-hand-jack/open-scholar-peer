@@ -854,7 +854,15 @@ class OSPRun:
         for path in self.run_dir.rglob("*"):
             if path.is_symlink() or not path.is_file():
                 continue
-            if path.is_relative_to(self.run_dir / ".brain") or path.is_relative_to(self.run_dir / RUNTIME_DIR):
+            # .opencode/ holds the generated adapter bundle plus npm packages
+            # OpenCode auto-installs there while a phase runs; it is
+            # CLI-owned, not an agent artifact, so it is outside the write
+            # contract enforced for phase runs.
+            if (
+                path.is_relative_to(self.run_dir / ".brain")
+                or path.is_relative_to(self.run_dir / RUNTIME_DIR)
+                or path.is_relative_to(self.run_dir / ".opencode")
+            ):
                 continue
             result[path.relative_to(self.run_dir).as_posix()] = sha256_file(path)
         return result
@@ -943,9 +951,16 @@ class OSPRun:
     def _phase_prompt(self, phase: str, options: RunOptions, literature_round: int | None = None) -> str:
         command = COMMANDS[phase]
         final_structure = " For the final review, preserve the venue-formatted review inside `## Output` and wrap it in the mandatory top-level `## Method`, `## Output`, and `## Provenance` sections." if phase == "review" else ""
+        if phase == "qa":
+            required_hint = "Write exactly one `05_qa_<slug>.md` per criterion under `.brain/raw/`."
+        elif phase == "literature" and literature_round:
+            round_artifact = PHASE_OUTPUTS["literature"][literature_round - 1]
+            required_hint = f"Write exactly this round's artifact: `{round_artifact}`."
+        else:
+            required_hint = "Write exactly these artifacts: " + ", ".join(f"`{path}`" for path in PHASE_OUTPUTS[phase]) + "."
         return f"""Execute only OSP phase `{phase}` by following `/{command}` in this isolated workspace. You are the file-capable primary executor: perform all required reads and writes yourself in this turn. Do not delegate the phase to a subagent or merely describe the work.
 
-This is an autonomous, report-only peer-review run. Do not modify `source/` or invent paper facts. Read `.brain/session.json` and obey the installed OSP artifact contract. {f'This is literature round {literature_round} of 3: execute exactly that round; only consolidate and mark the literature phase completed after round 3.' if literature_round else 'Complete the phase fully, write its required artifacts, and update only the corresponding session phase to completed.'}{final_structure} Do not advance to another phase. Unknown evidence must be labeled unresolved or not assessable.
+This is an autonomous, report-only peer-review run. Do not modify `source/` or invent paper facts. Read `.brain/session.json` and obey the installed OSP artifact contract. {required_hint} {f'This is literature round {literature_round} of 3: execute exactly that round; only consolidate and mark the literature phase completed after round 3.' if literature_round else 'Complete the phase fully and update only the corresponding session phase to completed.'}{final_structure} Do not advance to another phase. Unknown evidence must be labeled unresolved or not assessable.
 
 The CLI supplied venue={options.venue or 'unresolved'}, domain={options.domain or 'unresolved'}, network-policy={options.network_policy}. Do not request credentials or write secrets. Put any disposable scratch output only in `.brain/tmp/`.
 """
