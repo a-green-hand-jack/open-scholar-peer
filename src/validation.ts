@@ -40,7 +40,9 @@ export async function validatePhase(workspace: string, phase: Phase): Promise<Ch
       const path = join(workspace, FIXED_OUTPUTS.literature[index]);
       if (await exists(path)) {
         const content = await readFile(path, "utf8");
-        checks.push({ name: `literature:${strategy}`, passed: content.toLowerCase().includes(`strategy: ${strategy}`), detail: `round ${index + 1}` });
+        const escaped = strategy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const pattern = new RegExp(`(?:\\*\\*)?Strategy:(?:\\*\\*)?\\s*\`?${escaped}\`?`, "i");
+        checks.push({ name: `literature:${strategy}`, passed: pattern.test(content), detail: `round ${index + 1}` });
       }
     }
   }
