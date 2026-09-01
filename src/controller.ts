@@ -55,15 +55,31 @@ export class ReviewController {
     state.phases[phase] = { ...state.phases[phase], status: "running", attempts: (state.phases[phase]?.attempts ?? 0) + 1, started_at: now(), error: null };
     await writeJsonAtomic(join(this.options.workspace, ".osp-run", "run.json"), state);
     const command = await readFile(join(this.options.workspace, ".opencode", "commands", `${COMMANDS[phase]}.md`), "utf8");
-    const promptText = `Execute only OSP phase ${phase}. Follow the installed command below exactly. Do not advance another phase, modify source/, or claim completion without writing and updating .brain/session.json.\n\n${command}`;
+    const promptText = `Execute only OSP phase ${phase} in this isolated, autonomous, report-only review workspace.
+
+Read .brain/session.json first and follow the installed command below exactly. Do not ask the user questions: use the configured venue/domain/default fallback and continue autonomously. Do not modify source/. Do not execute or advance another phase. Perform the file reads and writes yourself; do not merely describe the work. Unknown evidence must be marked unresolved or not assessable.
+
+The controller will not trust a textual completion claim. The phase is complete only when its required files exist, contain non-empty ## Method, ## Output, and ## Provenance sections, and .brain/session.json marks this phase completed with completed_at and notes.
+
+For onboarding, write .brain/raw/00_review_guidelines.md, create exactly one .brain/raw/05_qa_<criterion-slug>.md scaffold for every session.json.qa_criteria item, and update session.json. For literature, perform all three distinct rounds and write the three round artifacts plus the consolidated artifact. For QA, write exactly the configured number of ordered Q/A pairs per criterion. For review, write .brain/review/final_review.md only after every earlier phase is complete.
+
+Follow the installed command below:
+
+${command}`;
     try {
       const invocations = phase === "literature" ? 3 : 1;
       for (let round = 1; round <= invocations; round += 1) {
         await prompt(this.runtime!, this.options.workspace, this.sessionId!, `${promptText}\n\nThis is literature round ${round} of 3.` , this.options.model, this.options.variant);
         await waitForIdle(this.runtime!, this.options.workspace, this.sessionId!, this.options.timeoutMs);
       }
-      const checks = await validatePhase(this.options.workspace, phase);
-      const failed = checks.find((check) => !check.passed);
+      let checks = await validatePhase(this.options.workspace, phase);
+      let failed = checks.find((check) => !check.passed);
+      if (failed) {
+        await prompt(this.runtime!, this.options.workspace, this.sessionId!, `The ${phase} phase output failed controller validation: ${failed.name}: ${failed.detail}. Remediate only this phase now. Write the missing or invalid artifacts and update .brain/session.json; do not advance to another phase.`, this.options.model, this.options.variant);
+        await waitForIdle(this.runtime!, this.options.workspace, this.sessionId!, this.options.timeoutMs);
+        checks = await validatePhase(this.options.workspace, phase);
+        failed = checks.find((check) => !check.passed);
+      }
       if (failed) throw new Error(`${phase} failed validation: ${failed.name}: ${failed.detail}`);
       const current = await this.state();
       current.phases[phase] = { ...current.phases[phase], status: "completed", completed_at: now(), notes: `${phase} artifacts validated`, error: null };
