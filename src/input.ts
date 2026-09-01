@@ -1,0 +1,64 @@
+import { createReadStream } from "node:fs";
+import { mkdir, chmod, cp, readdir, readFile, stat } from "node:fs/promises";
+import { basename, join, relative, resolve } from "node:path";
+import { createHash } from "node:crypto";
+import { execa } from "execa";
+
+const SENSITIVE = /(^|\/)(\.env(?:\.|$)|\.npmrc$|\.netrc$|auth\.json$|id_(?:rsa|ed25519|ecdsa)$|.*\.(?:pem|key|p12|pfx)$|.*(?:token|secret|credential).*(?:json|ya?ml|toml)?$)/i;
+const ALLOWED = new Set([".tex", ".bib", ".pdf", ".png", ".jpg", ".jpeg", ".eps", ".svg", ".sty", ".cls", ".bst", ".csv", ".tsv", ".md", ".txt"]);
+
+async function files(root: string): Promise<string[]> {
+  const result: string[] = [];
+  for (const entry of await readdir(root, { withFileTypes: true })) {
+    const path = join(root, entry.name);
+    const rel = relative(root, path).replaceAll("\\", "/");
+    if (SENSITIVE.test(rel) || [".git", ".brain", ".osp-run", ".open-scholar-peer"].includes(entry.name)) continue;
+    if (entry.isSymbolicLink()) throw new Error(`symbolic links are not supported: ${rel}`);
+    if (entry.isDirectory()) result.push(...await files(path));
+    else if (entry.isFile()) result.push(path);
+    else throw new Error(`special files are not supported: ${rel}`);
+  }
+  return result;
+}
+
+async function digest(paths: string[], root: string): Promise<string> {
+  const hash = createHash("sha256");
+  for (const path of paths.sort()) {
+    hash.update(relative(root, path).replaceAll("\\", "/"));
+    hash.update("\0");
+    hash.update(await readFile(path));
+    hash.update("\n");
+  }
+  return hash.digest("hex");
+}
+
+export async function importSource(sourceArg: string, workspace: string): Promise<{ kind: string; digest: string; source: string }> {
+  const source = resolve(sourceArg);
+  const sourceStat = await stat(source);
+  const sourceRoot = join(workspace, "source");
+  const inputRoot = join(workspace, ".brain", "input");
+  await mkdir(sourceRoot, { recursive: true });
+  await mkdir(inputRoot, { recursive: true });
+  if (sourceStat.isFile() && source.toLowerCase().endsWith(".pdf")) {
+    await cp(source, join(sourceRoot, "paper.pdf"));
+    await cp(source, join(inputRoot, "paper.pdf"));
+    try { await execa("pdftotext", ["-layout", join(sourceRoot, "paper.pdf"), join(inputRoot, "paper.md")]); }
+    catch { throw new Error("could not convert PDF; install Poppler pdftotext"); }
+    const sourceFiles = await files(sourceRoot);
+    return { kind: "pdf", digest: await digest(sourceFiles, sourceRoot), source: source };
+  }
+  if (!sourceStat.isDirectory()) throw new Error("expected a PDF or TeX directory");
+  const sourceFiles = await files(source);
+  const paperFiles = sourceFiles.filter((path) => ALLOWED.has(path.slice(path.lastIndexOf(".")).toLowerCase()) || basename(path).toLowerCase() === "makefile");
+  if (!paperFiles.some((path) => path.endsWith(".tex") || path.endsWith(".pdf") || basename(path) === "paper.md")) throw new Error("source directory contains neither TeX files, paper.md, nor PDF");
+  for (const path of paperFiles) await cp(path, join(sourceRoot, relative(source, path)));
+  const paper = paperFiles.find((path) => basename(path) === "paper.md") ?? paperFiles.find((path) => path.endsWith(".pdf"));
+  if (paper && paper.endsWith(".pdf")) {
+    await cp(join(sourceRoot, relative(source, paper)), join(inputRoot, "paper.pdf"));
+    try { await execa("pdftotext", ["-layout", join(inputRoot, "paper.pdf"), join(inputRoot, "paper.md")]); } catch { throw new Error("could not convert source PDF"); }
+  } else if (paper) await cp(join(sourceRoot, relative(source, paper)), join(inputRoot, "paper.md"));
+  else await (await import("node:fs/promises")).writeFile(join(inputRoot, "paper.md"), "# Imported TeX source\n\n" + (await Promise.all(paperFiles.filter((path) => path.endsWith(".tex")).map(async (path) => `## Source: ${relative(source, path)}\n\n${await readFile(path, "utf8")}`))).join("\n"));
+  for (const path of await files(sourceRoot)) await chmod(path, 0o444);
+  const imported = await files(sourceRoot);
+  return { kind: "tex-directory", digest: await digest(imported, sourceRoot), source };
+}
