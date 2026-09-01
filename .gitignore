@@ -29,6 +29,11 @@ __pycache__/
 
 # Open ScholarPeer MCP runtime (venv + server, gitignored)
 .open-scholar-peer/
+/.osp-run/
 
 # API keys (never commit)
 .env
+
+# Python build output
+/build/
+/*.egg-info/

@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "open-scholar-peer"
+version = "1.5.0"
+description = "OpenCode-native standalone CLI for Open ScholarPeer reviews"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+readme = "README.md"
+
+[project.scripts]
+osp = "osp_cli.cli:main"
+open-scholar-peer = "osp_cli.cli:main"
+
+[tool.setuptools]
+packages = ["osp_cli"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+osp_cli = ["_assets/**/*"]
