@@ -1,23 +1,22 @@
 # Contributing to Open ScholarPeer
 
-Thanks for your interest in Open ScholarPeer.
+OSP is an OpenCode-native TypeScript Agent. The TypeScript runtime owns orchestration, validation, input isolation, checkpoints, resume, and TUI/headless integration. Markdown assets under `extensions/_shared/` define the OSP personas and review method; edit those assets directly.
 
-The full contribution guide lives in [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
+## Checks
 
-## Quick pointers
+```bash
+npm install
+npm run typecheck
+npm run build
+npm test
+python3 -m unittest tests/test_osp_cli.py
+python3 -c "import ast; [ast.parse(open(f).read()) for f in ['mcp-server/osp_mcp.py','osp_cli/runtime.py','osp_cli/cli.py']]"
+```
 
-- Make canonical edits in [extensions/_shared/](extensions/_shared/)
-- Regenerate adapters with `python3 scripts/sync_adapters.py`
-- Verify parity with `python3 scripts/test_parity.py`
-- Smoke-test installers with `bash scripts/test_install.sh`
-- For standalone CLI changes, update `osp_cli/` and `docs/OSP_CLI.md`, then run
-  `python3 -m unittest tests/test_osp_cli.py`
-- Never edit `osp_cli/_assets/` directly; regenerate it with
-  `python3 scripts/build_cli_assets.py`
+The sample PDF can be used for a prepare-only check or a real review:
 
-## Before opening a pull request
+```bash
+node dist/cli.js review docs/paper/scholar_peer_arxiv.pdf --output /tmp/osp-review --prepare-only
+```
 
-- Read the project [Code of Conduct](CODE_OF_CONDUCT.md)
-- Review the [license](LICENSE)
-- Follow the checklist in [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
-- Update docs when behavior changes
+Do not add adapters for other coding agents. Do not modify imported `source/` files. Changes to the seven-stage protocol must update `docs/ARTIFACT_CONTRACTS.md`, `src/phases.ts`, validators, and tests together. Preserve `Method`, `Output`, and `Provenance` in every artifact.

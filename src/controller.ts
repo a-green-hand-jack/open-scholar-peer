@@ -11,23 +11,41 @@ type ControllerOptions = { workspace: string; mode: "autonomous" | "collaborativ
 export class ReviewController {
   private runtime?: OpenCodeRuntime;
   private sessionId?: string;
+  private interrupted = false;
+  private rejectInterruption?: (error: Error) => void;
+  private readonly interruption = new Promise<never>((_, reject) => { this.rejectInterruption = reject; });
   private readonly options: ControllerOptions;
 
   constructor(options: ControllerOptions) { this.options = options; }
 
   async run(): Promise<void> {
     this.runtime = await startOpenCode(this.options.workspace);
+    let tui: ReturnType<typeof import("./opencode.js")["attachTui"]> | undefined;
+    const abortController = new AbortController();
+    const interrupt = (signal: NodeJS.Signals) => {
+      this.interrupted = true;
+      abortController.abort();
+      this.rejectInterruption?.(new Error(`review interrupted by ${signal}`));
+    };
+    process.once("SIGINT", interrupt);
+    process.once("SIGTERM", interrupt);
+    let activePhase: Promise<void> | undefined;
     try {
       this.sessionId = await createSession(this.runtime, this.options.workspace);
       await writeJsonAtomic(join(this.options.workspace, ".osp-run", "session.json"), { server_url: this.runtime.serverUrl, session_id: this.sessionId, created_at: now(), pid: process.pid });
-      const tui = this.options.headless ? undefined : (await import("./opencode.js")).attachTui(this.runtime, this.options.workspace, this.sessionId);
-      let tuiExit: number | undefined;
-      if (tui) tui.exited.then((code) => { tuiExit = code; });
+      tui = this.options.headless ? undefined : (await import("./opencode.js")).attachTui(this.runtime, this.options.workspace, this.sessionId);
+      const tuiExited = tui?.exited;
       for (const phase of PHASES) {
-        if (tuiExit !== undefined) throw new Error(`OpenCode TUI exited with code ${tuiExit}`);
         const state = await this.state();
         if (state.phases[phase]?.status === "completed") continue;
-        await this.runPhase(phase);
+        activePhase = this.runPhase(phase, abortController.signal);
+        const outcome = await Promise.race([activePhase, this.interruption, ...(tuiExited ? [tuiExited] : [])]);
+        if (typeof outcome === "number") {
+          this.interrupted = true;
+          abortController.abort();
+          throw new Error(`OpenCode TUI exited with code ${outcome}`);
+        }
+        activePhase = undefined;
       }
       const state = await this.state();
       state.status = "completed";
@@ -36,18 +54,26 @@ export class ReviewController {
       state.final_review = join(this.options.workspace, ".brain", "review", "final_review.md");
       await writeJsonAtomic(join(this.options.workspace, ".osp-run", "run.json"), state);
       await checkpoint(this.options.workspace, state.run_id, "completed", "completed", this.sessionId);
-      if (tui) { await new Promise((resolve) => setTimeout(resolve, 1500)); tui.process.kill("SIGTERM"); await tui.exited; }
     } catch (error) {
+      if (this.sessionId) await abortSession(this.runtime, this.options.workspace, this.sessionId);
+      if (activePhase) await activePhase.catch(() => undefined);
       const state = await this.state();
-      state.status = "failed";
+      state.status = this.interrupted ? "interrupted" : "failed";
       state.updated_at = now();
       await writeJsonAtomic(join(this.options.workspace, ".osp-run", "run.json"), state);
-      if (this.sessionId) await abortSession(this.runtime, this.options.workspace, this.sessionId);
       throw error;
-    } finally { this.runtime.close(); }
+    } finally {
+      process.removeListener("SIGINT", interrupt);
+      process.removeListener("SIGTERM", interrupt);
+      if (tui && tui.process.exitCode === null && tui.process.signalCode === null) {
+        tui.process.kill("SIGTERM");
+        await tui.exited;
+      }
+      this.runtime.close();
+    }
   }
 
-  private async runPhase(phase: Phase): Promise<void> {
+  private async runPhase(phase: Phase, signal?: AbortSignal): Promise<void> {
     const state = await this.state();
     state.status = "running";
     state.current_phase = phase;
@@ -70,13 +96,13 @@ ${command}`;
       const invocations = phase === "literature" ? 3 : 1;
       for (let round = 1; round <= invocations; round += 1) {
         await prompt(this.runtime!, this.options.workspace, this.sessionId!, `${promptText}\n\nThis is literature round ${round} of 3.` , this.options.model, this.options.variant);
-        await waitForIdle(this.runtime!, this.options.workspace, this.sessionId!, this.options.timeoutMs);
+        await waitForIdle(this.runtime!, this.options.workspace, this.sessionId!, this.options.timeoutMs, signal);
       }
       let checks = await validatePhase(this.options.workspace, phase);
       let failed = checks.find((check) => !check.passed);
       if (failed) {
         await prompt(this.runtime!, this.options.workspace, this.sessionId!, `The ${phase} phase output failed controller validation: ${failed.name}: ${failed.detail}. Remediate only this phase now. Write the missing or invalid artifacts and update .brain/session.json; do not advance to another phase.`, this.options.model, this.options.variant);
-        await waitForIdle(this.runtime!, this.options.workspace, this.sessionId!, this.options.timeoutMs);
+        await waitForIdle(this.runtime!, this.options.workspace, this.sessionId!, this.options.timeoutMs, signal);
         checks = await validatePhase(this.options.workspace, phase);
         failed = checks.find((check) => !check.passed);
       }
@@ -90,22 +116,24 @@ ${command}`;
       if (this.options.mode === "collaborative" && phase !== "review") {
         current.status = "gate_waiting";
         await writeJsonAtomic(join(this.options.workspace, ".osp-run", "run.json"), current);
-        await this.waitForApproval();
+        await this.waitForApproval(signal);
       }
     } catch (error) {
       const failed = await this.state();
-      failed.phases[phase] = { ...failed.phases[phase], status: "failed", completed_at: now(), error: error instanceof Error ? error.message : String(error) };
-      failed.status = "failed";
+      const status = this.interrupted ? "interrupted" : "failed";
+      failed.phases[phase] = { ...failed.phases[phase], status, completed_at: now(), error: error instanceof Error ? error.message : String(error) };
+      failed.status = status;
       failed.updated_at = now();
       await writeJsonAtomic(join(this.options.workspace, ".osp-run", "run.json"), failed);
-      await checkpoint(this.options.workspace, failed.run_id, phase, "failed", this.sessionId);
+      await checkpoint(this.options.workspace, failed.run_id, phase, status, this.sessionId);
       throw error;
     }
   }
 
-  private async waitForApproval(): Promise<void> {
+  private async waitForApproval(signal?: AbortSignal): Promise<void> {
     const deadline = Date.now() + this.options.timeoutMs;
     while (Date.now() < deadline) {
+      if (signal?.aborted) throw new Error("collaborative gate interrupted");
       const state = await this.state();
       if (state.status === "prepared") return;
       if (state.status === "failed" || state.status === "interrupted") throw new Error(`gate ended with status ${state.status}`);

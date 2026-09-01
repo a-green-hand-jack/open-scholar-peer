@@ -21,7 +21,7 @@ Single FastMCP server exposing academic-search tools across three providers.
 
 ## Setup
 
-The installer (`bash install.sh`) copies this server into `<your-project>/.open-scholar-peer/mcp/` and creates a Python virtualenv with all dependencies. You don't need to manage it manually.
+The TypeScript runtime copies this server into `<review-workspace>/.open-scholar-peer/mcp/` and creates an isolated Python virtualenv with all dependencies.
 
 If you want to run it standalone for testing:
 

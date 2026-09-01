@@ -31,8 +31,13 @@ export async function validatePhase(workspace: string, phase: Phase): Promise<Ch
       const count = session.qa_pairs_per_criterion ?? 2;
       const questions = [...content.matchAll(/^### Q(\d+)\s*$/gm)].map((match) => Number(match[1]));
       const answers = [...content.matchAll(/^### A(\d+)\s*$/gm)].map((match) => Number(match[1]));
-      const expected = Array.from({ length: count }, (_, index) => index + 1);
-      checks.push({ name: `${relative}:qa-count`, passed: JSON.stringify(questions) === JSON.stringify(expected) && JSON.stringify(answers) === JSON.stringify(expected), detail: `expected ${count} ordered pairs` });
+      const pairHeadings = [...content.matchAll(/^### Pair\s+(\d+)\s*$/gim)].map((match) => Number(match[1]));
+      const labelledQuestions = [...content.matchAll(/^\*\*Question:\*\*/gim)].length;
+      const labelledAnswers = [...content.matchAll(/^\*\*Answer:\*\*/gim)].length;
+      const expected = Number.isInteger(count) && count > 0 ? Array.from({ length: count }, (_, index) => index + 1) : [];
+      const templatedPairs = JSON.stringify(questions) === JSON.stringify(expected) && JSON.stringify(answers) === JSON.stringify(expected);
+      const labelledPairs = JSON.stringify(pairHeadings) === JSON.stringify(expected) && labelledQuestions === count && labelledAnswers === count;
+      checks.push({ name: `${relative}:qa-count`, passed: Number.isInteger(count) && count > 0 && (templatedPairs || labelledPairs), detail: `expected ${count} ordered pairs` });
     }
   }
   if (phase === "literature") {
@@ -45,6 +50,32 @@ export async function validatePhase(workspace: string, phase: Phase): Promise<Ch
         checks.push({ name: `literature:${strategy}`, passed: pattern.test(content), detail: `round ${index + 1}` });
       }
     }
+  }
+  if (phase === "review" && await exists(join(workspace, FIXED_OUTPUTS.review[0]))) {
+    const review = await readFile(join(workspace, FIXED_OUTPUTS.review[0]), "utf8");
+    const required = ["Summary", "Strengths", "Weaknesses", "Dimension Scores"];
+    for (const section of required) {
+      const present = new RegExp(`^#{2,3} ${section}\\s*$`, "im").test(review);
+      checks.push({ name: `review:## ${section}`, passed: present, detail: present ? "present" : "missing" });
+    }
+    const recommendationHeading = /^#{2,3} (?:Decision )?Recommendation\s*$/im;
+    const notCheckedHeading = /^#{2,3} (?:What was not checked|Confidence)\s*$/im;
+    checks.push({ name: "review:recommendation-heading", passed: recommendationHeading.test(review), detail: "recommendation heading" });
+    checks.push({ name: "review:not-checked", passed: notCheckedHeading.test(review), detail: "confidence or what-was-not-checked section" });
+    const criteria = (session.qa_criteria ?? []).filter((criterion): criterion is { slug: string; label?: string } => Boolean(criterion.slug));
+    const scoreSection = review.split(/^#{2,3} Dimension Scores[ \t]*$/im)[1]?.split(/^#{2,3} /m)[0] ?? "";
+    const scoreRows = [...scoreSection.matchAll(/^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|[^\n]*$/gm)].filter((match) => !/^[-: ]+$/.test(match[1]) && !/^[-: ]+$/.test(match[2]) && !/^(?:criterion|dimension)$/i.test(match[1].trim()));
+    const expectedLabels = new Set(criteria.map((criterion) => (criterion.label ?? criterion.slug).trim().toLowerCase()));
+    const actualLabels = new Set(scoreRows.map((match) => match[1].trim().toLowerCase()));
+    const validScore = (value: string) => /^(?:[0-5]\s*\/\s*5|insufficient evidence to judge)$/i.test(value.trim());
+    checks.push({ name: "review:score-rows", passed: scoreRows.length === criteria.length && actualLabels.size === criteria.length && [...actualLabels].every((label) => expectedLabels.has(label)) && scoreRows.every((match) => validScore(match[2])), detail: `${scoreRows.length} rows for ${criteria.length} criteria with expected labels and scores` });
+    const recommendationBody = review.split(/^#{2,3} (?:Decision )?Recommendation[ \t]*$/im)[1]?.split(/^#{2,3} /m)[0] ?? "";
+    const recommendation = recommendationBody.split("\n").map((line) => line.replace(/^\s*[*-]\s*/, "").trim()).find(Boolean) ?? "";
+    const allowed = /^(?:weak accept|weak reject|ready with minor revisions|needs major revision|accept|borderline|reject|ready|needs revision|not ready|not enough evidence)(?:\s*,?\s+conditional on\s+.+)?$/i;
+    const lowScore = scoreRows.some((match) => /^(?:[0-2])\s*\/\s*5$/i.test(match[2].trim()));
+    const conditional = /\bconditional on\b/i.test(recommendation);
+    checks.push({ name: "review:recommendation", passed: allowed.test(recommendation) && (!lowScore || conditional), detail: lowScore ? "controlled label and conditional on clause required for scores 0-2" : "controlled recommendation vocabulary" });
+    checks.push({ name: "review:evidence-anchor", passed: /(?:\.brain\/raw\/01_structured_summary\.md|01_structured_summary\.md)/.test(review), detail: "summary artifact anchor" });
   }
   const phaseState = session.phases?.[phase];
   checks.push({ name: `session:${phase}`, passed: phaseState?.status === "completed" && Boolean(phaseState.completed_at) && Boolean(phaseState.notes), detail: phaseState?.status ?? "missing" });

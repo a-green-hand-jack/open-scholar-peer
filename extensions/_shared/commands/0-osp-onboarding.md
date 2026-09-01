@@ -16,7 +16,7 @@ Invoke the `osp-orchestrator` skill (no domain persona needed for this step).
 
 ### 1. Read session state
 
-- Read `.brain/session.json`. If missing, run `scripts/init_brain.sh` first or initialize a default per the v2 schema.
+- Read `.brain/session.json`. If missing, start a new isolated run with `osp review <paper>`.
 - If `phases.onboarding.status == "completed"` and `qa_criteria` is non-empty, ask the user whether to re-run (which would overwrite `00_review_guidelines.md` and any pre-scaffolded `05_qa_*.md` files). If they decline, exit.
 
 ### 2. Locate the paper and ensure a readable text version

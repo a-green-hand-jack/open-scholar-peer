@@ -37,10 +37,11 @@ export async function prompt(runtime: OpenCodeRuntime, directory: string, sessio
   }), "session.promptAsync");
 }
 
-export async function waitForIdle(runtime: OpenCodeRuntime, directory: string, sessionId: string, timeoutMs: number): Promise<void> {
+export async function waitForIdle(runtime: OpenCodeRuntime, directory: string, sessionId: string, timeoutMs: number, signal?: AbortSignal): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   let observedBusy = false;
   while (Date.now() < deadline) {
+    if (signal?.aborted) throw new Error("OpenCode session wait interrupted");
     const statuses = await unwrap(runtime.client.session.status({ directory }), "session.status") as Record<string, { type?: string }>;
     const status = statuses[sessionId]?.type;
     if (status === "busy" || status === "retry") observedBusy = true;

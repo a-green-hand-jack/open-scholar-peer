@@ -65,11 +65,18 @@ program.command("review <source>")
   .option("--model <model>", "provider/model reference")
   .option("--variant <variant>", "OpenCode model variant")
   .option("--timeout <seconds>", "phase timeout", "1800")
+  .option("--qa-pairs <count>", "ordered Q&A pairs per criterion", "2")
   .option("--network-policy <policy>", "online or offline", "online")
-  .action(async (source: string, options: { output: string; mode: "autonomous" | "collaborative"; headless?: boolean; prepareOnly?: boolean; model?: string; variant?: string; timeout: string; networkPolicy: "online" | "offline" }) => {
+  .action(async (source: string, options: { output: string; mode: "autonomous" | "collaborative"; headless?: boolean; prepareOnly?: boolean; model?: string; variant?: string; timeout: string; qaPairs: string; networkPolicy: "online" | "offline" }) => {
     if (!["autonomous", "collaborative"].includes(options.mode)) throw new Error("--mode must be autonomous or collaborative");
     if (!["online", "offline"].includes(options.networkPolicy)) throw new Error("--network-policy must be online or offline");
     const runDir = await prepare(source, options.output, options.mode, options.networkPolicy, options.model, options.variant);
+    const sessionPath = join(runDir, ".brain", "session.json");
+    const session = JSON.parse(await readFile(sessionPath, "utf8"));
+    const qaPairs = Number(options.qaPairs);
+    if (!Number.isInteger(qaPairs) || qaPairs < 1) throw new Error("--qa-pairs must be a positive integer");
+    session.qa_pairs_per_criterion = qaPairs;
+    await writeJsonAtomic(sessionPath, session);
     console.log(`Prepared OSP review workspace: ${runDir}`);
     if (options.prepareOnly) return;
     await new ReviewController({ workspace: runDir, mode: options.mode, headless: Boolean(options.headless), model: options.model, variant: options.variant, timeoutMs: Number(options.timeout) * 1000 }).run();

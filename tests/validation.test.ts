@@ -17,4 +17,14 @@ describe("artifact compatibility", () => {
       expect((await validatePhase(directory, "literature")).filter((check) => check.name.startsWith("literature:")).every((check) => check.passed)).toBe(true);
     } finally { await rm(directory, { recursive: true, force: true }); }
   });
+
+  it("accepts pair-labelled QA artifacts", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "osp-qa-validation-"));
+    try {
+      await mkdir(join(directory, ".brain", "raw"), { recursive: true });
+      await writeFile(join(directory, ".brain", "session.json"), JSON.stringify({ qa_pairs_per_criterion: 2, qa_criteria: [{ slug: "novelty" }], phases: { qa: { status: "completed", completed_at: "now", notes: "ok" } } }));
+      await writeFile(join(directory, ".brain", "raw", "05_qa_novelty.md"), "## Method\n## Output\n### Pair 1\n**Question:** q1\n**Answer:** a1\n### Pair 2\n**Question:** q2\n**Answer:** a2\n## Provenance\nsource\n");
+      expect((await validatePhase(directory, "qa")).find((check) => check.name.endsWith(":qa-count"))?.passed).toBe(true);
+    } finally { await rm(directory, { recursive: true, force: true }); }
+  });
 });

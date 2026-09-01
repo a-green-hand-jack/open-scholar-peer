@@ -1,214 +1,62 @@
-# Troubleshooting — Open ScholarPeer
+# Troubleshooting
 
-Common issues and how to fix them, organized by symptom.
+## CLI
 
----
-
-## Install issues
-
-### `python3: command not found`
-
-OSP's MCP runtime needs Python 3.10+. Install via your OS package manager:
-```bash
-# Ubuntu/Debian
-sudo apt install python3 python3-venv
-
-# macOS (Homebrew)
-brew install python@3.12
-```
-
-### `pip install` fails inside `.open-scholar-peer/mcp/`
-
-Inspect the log:
-```bash
-.open-scholar-peer/mcp/.venv/bin/pip install -r .open-scholar-peer/mcp/requirements.txt
-```
-Common causes: outdated pip (`pip install --upgrade pip` in the venv), missing system libs for `lxml` or `cryptography` (on Ubuntu: `sudo apt install build-essential libxml2-dev libxslt1-dev libssl-dev`).
-
-### `osp: command not found` after the standalone CLI installer
-
-The one-command CLI installer creates an isolated user-owned virtual environment
-and reports the command directory it selected. Add that reported directory (the
-default is shown below) to `PATH`, open a new shell, then confirm the runtime:
+Check the installation and executable selected by `PATH`:
 
 ```bash
-export PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:$PATH"
+command -v osp
+osp --version
 osp doctor
 ```
 
-If the installer cannot find `pip`, install Python 3.10+ with pip and retry.
-On Ubuntu/Debian, `sudo apt install python3-pip python3-venv` provides it.
+The supported CLI requires Node.js 20+, OpenCode 1.18.25+, Python 3.10+ with `venv`, and Poppler `pdftotext` for PDF input. If an older Python `osp` wrapper is found first, put the directory from `OSP_BIN_DIR` first in `PATH`.
 
-### `osp review` says Bubblewrap is required
+## Preparation
 
-The standalone CLI isolates Linux runs with Bubblewrap. Install it, then retry:
-
-```bash
-sudo apt install bubblewrap
-osp doctor
-```
-
-`osp doctor` also checks that OpenCode and `pdftotext` are available.
-
-### `osp review` fails at startup with "Failed to initialize provider" or "Cannot connect to API"
-
-Linux CLI runs execute OpenCode inside a Bubblewrap sandbox that exposes only
-`~/.config/opencode`, `~/.opencode`, and the OpenCode auth store. The model you
-select must work from inside that sandbox:
-
-- Use a self-contained provider whose key lives under `~/.config/opencode/`,
-  for example `--model apex/gpt-5.6-sol` (reads `account-keys/apex-gpt.key`).
-- Virtual routers that read host OAuth files outside `~/.config/opencode`
-  (e.g. `gpt-priority`, which loads Codex auth from `~/.codex`) fail to
-  initialize inside the sandbox by design — prefer the concrete provider for
-  CLI runs.
-- `Cannot connect to API` means the sandbox cannot reach the provider endpoint.
-  Confirm the machine can reach the base URL and that DNS resolves (Ubuntu
-  binds `/run/systemd/resolve` automatically).
-
-A quick sandbox sanity check outside the review pipeline:
+Use prepare-only to isolate input and dependency problems:
 
 ```bash
-opencode run -m apex/gpt-5.6-sol --format json "reply with exactly: pong"
+osp review ./paper.pdf --output ./osp-review --prepare-only
 ```
 
-### Installer wrote files but the AI tool doesn't see commands
+OSP accepts PDF, TeX directories, ZIP/TAR archives, and existing OSP workspaces. It rejects symlinks, special files, sensitive credentials, archive path traversal, and output directories inside the source.
 
-Reload the tool:
-- **Claude Code:** restart or run `/help` to confirm commands appear.
-- **Cursor:** reload window (Cmd+R / Ctrl+R).
-- **Gemini CLI:** run `/commands reload`.
-- **Copilot CLI:** restart the CLI session.
-- **Antigravity:** type `/` in Agent chat to refresh.
+## Runtime and resume
 
-If commands still don't appear, verify the adapter directory is in the right location:
 ```bash
-ls .claude/commands/      # Claude
-ls .cursor/commands/      # Cursor
-ls .gemini/commands/      # Gemini (TOML)
-ls .agents/workflows/     # Antigravity
-ls .github/prompts/       # Copilot CLI
+osp status <run> --json
+osp validate <run> --json
+osp resume <run>
 ```
 
-### Re-running the installer didn't pick up `_shared/` changes
+Do not edit `source/`, `.brain/`, or `.osp-run/run.json` while a run is active. Resume verifies the input and locked scope digests. A failed phase is preserved in Git and can be retried from the same workspace.
 
-The installer copies from `extensions/.{tool}/` (the synced adapter), not `_shared/`. Run the sync first:
+In collaborative mode, a run with status `gate_waiting` requires:
+
 ```bash
-python3 scripts/sync_adapters.py
-bash install.sh   # or scripts/install_<tool>.sh
+osp approve <run>
 ```
 
----
+Autonomous mode never waits for user questions and uses the configured/default venue and domain policy.
 
-## MCP server issues
+## MCP
 
-### `osp` MCP server appears "disconnected" in the AI tool
+The MCP server is installed per run at `.open-scholar-peer/mcp/`. If setup fails, provide a Python interpreter with `ensurepip`:
 
-Try running it manually to surface errors:
 ```bash
-.open-scholar-peer/mcp/.venv/bin/python .open-scholar-peer/mcp/osp_mcp.py
+PYTHON=/path/to/python3 osp review ./paper.pdf --prepare-only
 ```
-The server runs on stdio and stays open waiting for MCP protocol messages. If it exits immediately with a Python traceback, that's the bug.
 
-### `markitdown` MCP not converting PDFs
+Provider failures and rate limits are recorded as unresolved provenance. They must not be replaced with fabricated citations.
 
-`markitdown-mcp` is registered as `{"command": "uvx", "args": ["markitdown-mcp"]}`. Verify `uvx` works:
+## Development
+
 ```bash
-uvx --version          # uv 0.4+ required
-uvx markitdown-mcp     # should fetch and start the package
-```
-If `uvx` is not installed:
-```bash
-pipx install uv
-# or
-curl -LsSf https://astral.sh/uv/install.sh | sh
+npm run typecheck
+npm run build
+npm test
+python3 -m unittest tests/test_osp_cli.py
 ```
 
-### Semantic Scholar returns 429 Too Many Requests
-
-Anonymous rate limits are tight. Get a free API key (https://www.semanticscholar.org/product/api#api-key) and export it:
-```bash
-export SEMANTIC_SCHOLAR_API_KEY=sk-...
-```
-Add to your shell profile (`~/.zshrc`, `~/.bashrc`) so it persists across sessions. Restart your AI tool to pick up the new env var.
-
-### `osp` server starts but tools return errors
-
-Each tool has consistent error envelopes. Look for entries like `[{"error": "..."}]` in the AI tool's output and check:
-- Network connectivity (`curl https://api.semanticscholar.org/graph/v1/paper/search?query=test`)
-- For Google Scholar tools: HTML scraping may have hit a rate limit; wait 5-10 minutes.
-
----
-
-## Workflow issues
-
-### `/0-osp-onboarding` says it can't find the paper
-
-Run `/open-scholar-peer` — the orchestrator will detect you're at the onboarding step and ask you for the paper's path. You can provide any path; it will copy the file into `.brain/input/` for you.
-
-### `/1-osp-summary` refuses with "binary format and markitdown unavailable"
-
-This is the hard input guard working correctly. Either:
-1. Install markitdown (see above).
-2. Provide a markdown version manually:
-   ```bash
-   markitdown paper.pdf > .brain/input/paper.md   # if you have it CLI-locally
-   ```
-
-### `/2-osp-literature` produces only 1-2 round files instead of 3
-
-The agent stopped early. Re-run `/2-osp-literature` — the structural file requirement (`02a/02b/02c_literature_round*.md`) is enforced, so missing files block consolidation. Check `.brain/raw/` to see how far it got.
-
-### Q&A phase produces fewer than 10 pairs per criterion
-
-The file template at `defaults/qa_pair_template.md` declares 10 placeholder slots. If the agent stopped early, re-run `/5-osp-qa`. On Antigravity (self-reflection mode), pair generation is sequential and slower — be patient.
-
-### `/open-scholar-peer` says "No `.brain/session.json`"
-
-Run the brain initializer:
-```bash
-bash scripts/init_brain.sh
-```
-This creates the v2 schema. Then re-run `/0-osp-onboarding`.
-
-### Re-ran `/1-osp-summary` and now my final review feels stale
-
-OSP does not auto-invalidate downstream artifacts (see `KNOWN_LIMITATIONS.md` §8). Re-run `/2-osp-literature` … `/6-osp-review` in order, or use `/open-scholar-peer` and follow its dispatcher.
-
----
-
-## Sync / development issues
-
-### `python3 scripts/sync_adapters.py` reports drift
-
-Run with no arguments to regenerate:
-```bash
-python3 scripts/sync_adapters.py
-python3 scripts/test_parity.py   # confirm
-```
-
-### My edits to `extensions/.claude/...` keep disappearing
-
-Adapter directories are **generated**. Edit `extensions/_shared/` instead, then run the sync script. See `docs/CONTRIBUTING.md`.
-
-### `bash scripts/test_install.sh` fails on one tool
-
-Inspect the log:
-```bash
-cat /tmp/osp_install_<tool>.log
-```
-Most failures are missing `python3` or the smoke test running with stale adapters. Re-sync first:
-```bash
-python3 scripts/sync_adapters.py
-bash scripts/test_install.sh
-```
-
----
-
-## Still stuck?
-
-Open an issue at https://github.com/amirkiarafiei/open-scholar-peer/issues with:
-- The slash command you ran
-- The exact error message
-- Your `.brain/session.json` (with any sensitive paper content redacted)
-- The output of `python3 scripts/test_parity.py`
+The old multi-tool adapter and installer system has been retired. Canonical Markdown assets are under `extensions/_shared/`; do not run or recreate the deleted adapter scripts.

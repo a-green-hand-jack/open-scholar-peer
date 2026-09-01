@@ -1,8 +1,8 @@
 # `_shared/` Manifest — Single Source of Truth
 
-This file enumerates every canonical asset under `extensions/_shared/`. The sync script (`scripts/sync_adapters.py`) reads this manifest to know what to translate into per-tool adapter directories.
+This file enumerates every canonical OSP asset under `extensions/_shared/`. The TypeScript runtime installs these assets directly into isolated OpenCode review workspaces; no per-tool adapter generation is performed.
 
-**Rule of thumb:** humans only ever edit files in `_shared/`. Per-tool directories (`extensions/.claude/`, `.cursor/`, `.gemini/`, `.agent/`, `.agents/`, `.github/`) are **generated artifacts**.
+**Rule of thumb:** humans only edit files in `_shared/`. The runtime packages these canonical assets into each isolated OpenCode review workspace.
 
 ## Files in `_shared/`
 
@@ -46,26 +46,15 @@ This file enumerates every canonical asset under `extensions/_shared/`. The sync
 | `defaults/qa_pair_template.md` | `/5-osp-qa` to enforce the N-pair structure per criterion (N = `session.json.qa_pairs_per_criterion`, default 2) |
 | `defaults/round_strategy_template.md` | `/2-osp-literature` to enforce the 3-round structure |
 
-## What gets generated where
+## Runtime installation map
 
-For each canonical file in `_shared/`, the sync script produces a tool-specific equivalent:
+`src/config.ts` copies the canonical assets into each isolated review workspace:
 
-| Source (in `_shared/`) | Claude (`.claude/`) | Cursor (`.cursor/`) | Gemini (`.gemini/`) | Antigravity (`.agent/`) | Antigravity CLI (`.agents/`) | Copilot CLI (`.github/`) |
-|---|---|---|---|---|---|---|
-| `commands/<name>.md` | `commands/<name>.md` (frontmatter) | `commands/<name>.md` | `commands/<name>.toml` | `workflows/<name>.md` | `commands/<name>.md` | `prompts/<name>.md` |
-| `skills/<name>/SKILL.md` | `skills/<name>/SKILL.md` | `skills/<name>/SKILL.md` | `skills/<name>/SKILL.md` | `skills/<name>/SKILL.md` | `skills/<name>/SKILL.md` | `skills/<name>/SKILL.md` |
-| `rules/osp-rules.md` | `rules/osp-rules.md` | `rules/osp-rules.mdc` | `GEMINI.md` (always-on) | `rules/osp-rules.md` | `AGENTS.md` (always-on) | `instructions/osp-rules.md` + `AGENTS.md` |
-| `defaults/*.md` | `defaults/*.md` | `defaults/*.md` | `defaults/*.md` | `defaults/*.md` | `defaults/*.md` | `defaults/*.md` |
+| Source | Workspace destination |
+|---|---|
+| `commands/*.md` | `.opencode/commands/*.md` |
+| `skills/*/SKILL.md` | `.opencode/agents/*/SKILL.md` |
+| `rules/osp-rules.md` | `.opencode/AGENTS.md` |
+| `defaults/**/*.md` | `.opencode/defaults/**/*.md` |
 
-## Capability flags per tool
-
-The sync script encodes a capability matrix that customizes the Q&A workflow:
-
-| Tool | Subagents | Q&A mode | MCP config path |
-|---|---|---|---|
-| Claude Code | yes | subagent (osp-answer-generator-agent) | `.mcp.json` |
-| Cursor | yes | subagent | `.cursor/mcp.json` |
-| Gemini CLI | yes | subagent | `.gemini/extensions/<ext>/gemini-extension.json` |
-| GitHub Copilot CLI | yes | subagent | `.github/copilot-cli/mcp.json` (TBD — see Phase 5) |
-| Antigravity | **no** | **self-reflection** (turn markers) | `~/.gemini/antigravity/mcp_config.json` (global, manual) |
-| Antigravity CLI | yes | subagent | `.agents/mcp_config.json` (local, auto-merged) |
+OpenCode provides subagent isolation for Q&A. Autonomous runs deny interactive questions; collaborative runs allow questions and add controller-owned phase gates.

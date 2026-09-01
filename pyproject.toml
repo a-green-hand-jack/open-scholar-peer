@@ -10,10 +10,6 @@ requires-python = ">=3.10"
 license = {text = "MIT"}
 readme = "README.md"
 
-[project.scripts]
-osp = "osp_cli.cli:main"
-open-scholar-peer = "osp_cli.cli:main"
-
 [tool.setuptools]
 packages = ["osp_cli"]
 include-package-data = true
