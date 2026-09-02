@@ -51,6 +51,8 @@ Each round uses the Bohrium LKM tools first, together with arXiv and Semantic Sc
 
 After all three rounds, the agent writes `02_retrieved_literature.md` consolidating retained papers (deduplicated), with one entry per paper: title, authors, year, venue, abstract, source(s) it appeared in.
 
+**Optional side artifact — `02_lkm_paper_extraction.md`.** On the first literature invocation, the agent MAY submit the paper-under-review PDF to Bohrium LKM (`submit_bohrium_pdf` → bounded `wait_bohrium_parse_task` → `get_bohrium_parse_result`) and store the extraction (addressed problems, open questions, conclusions) here. It is best-effort: a paper beyond LKM's limits (64 MiB / 50 pages) or a missing `bohr` CLI skips it without blocking the rounds. When present, each round must seed at least one query from its open questions / conclusions. Result pricing: 1.00 CNY first time (0.10 CNY on cache hit).
+
 ## Q&A contract for `/5-osp-qa`
 
 For every criterion in `session.json.qa_criteria[]`, the step produces `.brain/raw/05_qa_<slug>.md` with **exactly N Q&A pairs**, where N is `session.json.qa_pairs_per_criterion` (user-configurable at `/5-osp-qa` start; default 2). The file template (from `defaults/qa_pair_template.md`) is:

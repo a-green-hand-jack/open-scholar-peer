@@ -99,14 +99,15 @@ Follow the installed command below:
         await waitForIdle(this.runtime!, this.options.workspace, this.sessionId!, this.options.timeoutMs, signal);
       }
       let checks = await validatePhase(this.options.workspace, phase);
-      let failed = checks.find((check) => !check.passed);
-      if (failed) {
-        await prompt(this.runtime!, this.options.workspace, this.sessionId!, `The ${phase} phase output failed controller validation: ${failed.name}: ${failed.detail}. Remediate only this phase now. Write the missing or invalid artifacts and update .brain/session.json; do not advance to another phase.`, this.options.model, this.options.variant);
+      let failed = checks.filter((check) => !check.passed);
+      if (failed.length > 0) {
+        const details = failed.map((check) => `${check.name}: ${check.detail}`).join("; ");
+        await prompt(this.runtime!, this.options.workspace, this.sessionId!, `The ${phase} phase output failed controller validation: ${details}. Remediate only this phase now. Write the missing or invalid artifacts and update .brain/session.json; do not advance to another phase.`, this.options.model, this.options.variant);
         await waitForIdle(this.runtime!, this.options.workspace, this.sessionId!, this.options.timeoutMs, signal);
         checks = await validatePhase(this.options.workspace, phase);
-        failed = checks.find((check) => !check.passed);
+        failed = checks.filter((check) => !check.passed);
       }
-      if (failed) throw new Error(`${phase} failed validation: ${failed.name}: ${failed.detail}`);
+      if (failed.length > 0) throw new Error(`${phase} failed validation: ${failed.map((check) => `${check.name}: ${check.detail}`).join("; ")}`);
       const current = await this.state();
       current.phases[phase] = { ...current.phases[phase], status: "completed", completed_at: now(), notes: `${phase} artifacts validated`, error: null };
       current.status = "prepared";

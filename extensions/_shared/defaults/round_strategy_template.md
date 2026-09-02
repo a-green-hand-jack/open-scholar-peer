@@ -12,13 +12,15 @@
   - `osp-mcp.search_arxiv`
   - `osp-mcp.search_semantic_scholar`
   - `osp-mcp.search_google_scholar` (fallback only after LKM error)
-- **Billing:** LKM searches cost 0.05 CNY/call; do not auto-page.
   - native Web Search (where available)
+- **Billing:** LKM searches cost 0.05 CNY/call; do not auto-page.
 - **Query formulation rules for this round:**
-  - Round 1 (sub-domain-anchor): use the paper's stated sub-domain and primary keywords; aim for the canonical 10–20 most-cited works in this area.
-  - Round 2 (method-anchor): switch to the proposed method's name and key technical terms; find prior or concurrent work using the *same technique*.
-  - Round 3 (temporal-expansion): filter to the last 12 months; explicitly include arXiv pre-prints, workshop papers, and concurrent submissions; goal is catching what static knowledge cutoffs miss.
+  - Round 1 (sub-domain-anchor): use the paper's stated sub-domain and primary keywords; aim for the canonical 10–20 most-cited works in this area. LKM: `search_bohrium_lkm` with scopes `conclusion,abstract` (claims-level view of established prior art) + `search_bohrium_paper` for citation counts.
+  - Round 2 (method-anchor): switch to the proposed method's name and key technical terms; find prior or concurrent work using the *same technique*. LKM: `search_bohrium_reasoning` with the method phrasing; `search_bohrium_lkm` on the method name; then `get_bohrium_paper_graph` on the top hit to expand its reasoning structure.
+  - Round 3 (temporal-expansion): filter to the last 12 months; explicitly include arXiv pre-prints, workshop papers, and concurrent submissions; goal is catching what static knowledge cutoffs miss. LKM: `search_bohrium_paper` with `year_from`/`year_to` = the last 12 months + `search_arxiv` sorted by date.
 - **Retention criteria:** keep papers that are (a) directly comparable on task or method, (b) cited >5 times if older than 12 months, (c) any pre-print regardless of citations if from the last 6 months and topically relevant.
+- **Query seeding:** when `.brain/raw/02_lkm_paper_extraction.md` exists, derive at least one query per round from its open questions / conclusions (the paper's own research vocabulary).
+- **Bohrium LKM billing:** LKM searches are fixed-price calls (0.05 CNY each; the personal monthly 1,000-call quota covers the first calls). Keep one bounded call per query — do not page automatically.
 
 ## Output
 

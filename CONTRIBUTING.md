@@ -9,8 +9,8 @@ npm install
 npm run typecheck
 npm run build
 npm test
-python3 -m unittest tests/test_osp_cli.py
-python3 -c "import ast; [ast.parse(open(f).read()) for f in ['mcp-server/osp_mcp.py','osp_cli/runtime.py','osp_cli/cli.py']]"
+python3 -m unittest discover tests -p 'test_*.py'
+python3 -c "import ast; ast.parse(open('mcp-server/osp_mcp.py').read()); ast.parse(open('mcp-server/providers/bohrium.py').read())"
 ```
 
 The sample PDF can be used for a prepare-only check or a real review:

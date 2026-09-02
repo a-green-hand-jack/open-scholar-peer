@@ -2,12 +2,34 @@
 from __future__ import annotations
 import json
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
 
 BOHR_TIMEOUT = 30
+
+
+def _pdf_page_count(pdf_path: Path) -> int | str:
+    if shutil.which("pdfinfo") is None:
+        return "pdfinfo is required to validate the LKM PDF page limit"
+    try:
+        result = subprocess.run(
+            ["pdfinfo", str(pdf_path)],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return "pdfinfo timed out while validating the LKM PDF page limit"
+    if result.returncode != 0:
+        return "could not determine the PDF page count for LKM extraction"
+    match = re.search(r"^Pages:\s*(\d+)\s*$", result.stdout, re.MULTILINE)
+    if match is None:
+        return "could not determine the PDF page count for LKM extraction"
+    return int(match.group(1))
 
 def _call(args: list[str], keep_error_data: bool = False) -> dict[str, Any]:
     billable = any(part in {"search", "reasoning", "graph", "result"} for part in args)
@@ -77,6 +99,11 @@ def parse_submit(pdf_path: str) -> dict[str, Any]:
         return {"error": "pdf_path must be a regular PDF directly under .brain/input"}
     if candidate.stat().st_size > 64 * 1024 * 1024:
         return {"error": "PDF exceeds the 64 MiB extraction limit"}
+    pages = _pdf_page_count(candidate)
+    if isinstance(pages, str):
+        return {"error": pages}
+    if pages > 50:
+        return {"error": "PDF exceeds the 50-page LKM extraction limit"}
     return _call(["lkm", "parse", "submit", str(candidate)])
 def parse_status(task_id: str) -> dict[str, Any]: return _call(["lkm", "parse", "status", task_id])
 def parse_wait(task_id: str, interval_s: int = 5, timeout_s: int = 60) -> dict[str, Any]:

@@ -30,7 +30,7 @@ onboarding -> summary -> literature -> historian -> baseline_scout -> qa -> revi
 npm run typecheck
 npm run build
 npm test
-python3 -m unittest tests/test_osp_cli.py
+python3 -m unittest discover tests -p 'test_*.py'
 osp doctor
 osp review docs/paper/scholar_peer_arxiv.pdf --output /tmp/osp-e2e --headless --mode autonomous
 osp validate /tmp/osp-e2e/<run>
@@ -38,4 +38,4 @@ osp validate /tmp/osp-e2e/<run>
 
 ## Scope
 
-The former per-tool adapter directories, installers, parity scripts, and sync pipeline are retired. OSP is distributed as an OpenCode-native CLI. The Python `osp_cli` implementation remains only as a behavior reference while the TypeScript runtime is the supported product.
+The former per-tool adapter directories, installers, parity scripts, sync pipeline, and Python CLI are retired. OSP is distributed as an OpenCode-native CLI.

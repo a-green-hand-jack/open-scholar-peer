@@ -21,7 +21,7 @@ Strategy: <sub-domain anchor | method anchor | temporal expansion>
 Goal:     <one sentence — what this round is trying to find>
 Tools:    Bohrium LKM  +  arxiv  +  semantic_scholar  +  Google Scholar fallback
 Writes:   .brain/raw/02N_literature_round<N>.md
-Effort:   ~8-12 tool calls, ~1-3 min
+Effort:   ~8-12 tool calls, ~1-2 min
 ─────────────────────────────────────────────────────────
 ```
 
@@ -29,8 +29,9 @@ This block runs even if the user has run literature review before — they may n
 
 ## Inputs
 
-- `.brain/session.json`
+- `.brain/session.json` — check `mcp.bohrium_available` to decide whether LKM or Google Scholar is the primary broad-coverage source
 - `.brain/raw/01_structured_summary.md` (the Summary Agent's output)
+- `.brain/raw/02_lkm_paper_extraction.md` (optional — LKM's extraction of the paper's own questions/conclusions; seed queries from it when present)
 
 ## Mandatory three-round retrieval protocol
 
@@ -43,6 +44,27 @@ You MUST execute three structurally distinct rounds and produce **three separate
 | 3 | `02c_literature_round3.md` | `temporal-expansion` | Filter to last 12 months. Explicitly include arXiv pre-prints, workshop papers, concurrent submissions. Catch what static knowledge cutoffs miss. |
 
 After all three rounds, write `02_retrieved_literature.md` consolidating retained papers (deduplicated).
+
+Per-round Bohrium LKM routing (the primary retrieval path once `mcp.bohrium_available` is true):
+
+| Round | Primary LKM tools |
+|---|---|
+| 1 | `search_bohrium_lkm` (scopes `conclusion,abstract`) + `search_bohrium_paper` — claims-level view of established prior art |
+| 2 | `search_bohrium_reasoning` (query = method terms) + `search_bohrium_lkm` (method name) + `get_bohrium_paper_graph` on the top hit to expand its reasoning structure |
+| 3 | `search_bohrium_paper` with `year_from`/`year_to` = last 12 months + `search_arxiv` sorted by date |
+
+## LKM paper extraction (optional query seeds)
+
+When the review command has produced `.brain/raw/02_lkm_paper_extraction.md`
+(the paper under review parsed by LKM), use its **open questions and
+conclusions** to seed at least one query per round. These are the paper's own
+research vocabulary — queries built from them hit prior work that directly
+bears on the paper's claims instead of a paraphrase.
+
+The extraction itself is best-effort and happens in the command layer
+(`submit_bohrium_pdf` → bounded `wait_bohrium_parse_task` →
+`get_bohrium_parse_result`). If it is absent (paper too long, no bohr CLI,
+budget), do not attempt it inside this skill — just proceed without seeds.
 
 ## Tools
 
@@ -91,6 +113,7 @@ Use `extensions/_shared/defaults/round_strategy_template.md` (or its synced equi
 ## Provenance
 - Total queries run across all rounds: <N>
 - API key used: <yes/no for Semantic Scholar>
+- Bohrium LKM available: <yes/no> (from `session.json.mcp.bohrium_available`)
 - Tools that were unavailable in this environment: <list, if any>
 ```
 
@@ -107,4 +130,6 @@ After all four files exist:
 - Do **not** synthesize a narrative — that's the Historian's job. Just retrieve and tabulate.
 - Do **not** skip a round because you "already covered it" — the strategy differentiation is the point.
 - Do **not** discard pre-prints just because they're unpublished — round 3's whole purpose is catching them.
-- Do **not** silently fail a tool — if `osp-mcp` is unreachable, list it in Provenance under "Tools unavailable" so the user knows.
+- Do **not** silently fail a tool — if `osp-mcp` is unreachable or a tool returns `{"error": ...}`, list it in Provenance under "Tools unavailable" so the user knows.
+- Do **not** fall back to Google Scholar while Bohrium LKM is reachable — LKM is the primary broad-coverage source and returns in ~3 s vs Google Scholar's best-effort scraping.
+- Do **not** page through LKM results automatically — each new page/call is a billable request; one bounded call per query (default `top_k`/`size`) is enough.

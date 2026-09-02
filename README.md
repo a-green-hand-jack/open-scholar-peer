@@ -4,7 +4,7 @@ Open ScholarPeer (OSP) is an independent OpenCode-native Paper Review Agent for 
 
 ## Install
 
-Requirements: Node.js 20+, OpenCode 1.18.25+, Python 3.10+ with `venv`, and Poppler `pdftotext` for PDF input.
+Requirements: Node.js 20+, OpenCode 1.18.25+, Python 3.10+ with `venv`, and Poppler `pdftotext`/`pdfinfo` for PDF input and optional LKM PDF extraction.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/a-green-hand-jack/open-scholar-peer/main/install_cli.sh | bash
@@ -109,7 +109,7 @@ osp doctor
 npm run typecheck
 npm run build
 npm test
-python3 -m unittest tests/test_osp_cli.py
+python3 -m unittest discover tests -p 'test_*.py'
 ```
 
 The canonical OSP commands, personas, defaults, and rules are in [`extensions/_shared`](extensions/_shared). The Python MCP server and academic providers are in [`mcp-server`](mcp-server). Other coding-agent adapters and their installers are intentionally not part of this project.

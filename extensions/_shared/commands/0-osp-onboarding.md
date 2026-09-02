@@ -196,6 +196,7 @@ Venue: <name>  |  Criteria: <N> (<G> gating)  |  Guidelines: <web|user|generic>
 Domain profile: <name><, + numerical-slice overlay>
 Review mode: <theoretical|empirical|other>
 Paper located and text-version confirmed.
+Bohrium LKM: <available — primary literature source | unavailable — Google Scholar fallback>
 ↳ .brain/raw/00_review_guidelines.md
 ↳ .brain/raw/05_qa_<slug>.md  (pre-scaffolded for each criterion)
 ↳ .brain/session.json  (qa_pairs_per_criterion: <N>)

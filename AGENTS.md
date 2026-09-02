@@ -17,11 +17,9 @@ npm run typecheck
 npm run build
 npm test
 
-# AST-check Python files (no formal linter configured):
-python3 -c "import ast; [ast.parse(open(f).read()) for f in ['mcp-server/osp_mcp.py','osp_cli/runtime.py','osp_cli/cli.py']]"
-
-# Standalone CLI offline tests:
-python3 -m unittest tests/test_osp_cli.py
+# Python MCP checks:
+python3 -c "import ast; ast.parse(open('mcp-server/osp_mcp.py').read()); ast.parse(open('mcp-server/providers/bohrium.py').read())"
+python3 -m unittest discover tests -p 'test_*.py'
 
 # Run the MCP server standalone (debug mode):
 cd mcp-server && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/python osp_mcp.py
@@ -31,7 +29,7 @@ cd mcp-server && python3 -m venv .venv && .venv/bin/pip install -r requirements.
 
 `extensions/_shared/` is the canonical source for OSP commands, personas, rules, and defaults. The TypeScript runtime copies these assets directly into an isolated review workspace. State during a review lives at `<review-workspace>/.brain/` (gitignored).
 
-`src/` contains the OpenCode-native TypeScript runtime. `osp_cli/` is retained only as a Python behavior reference during migration. After edits under `_shared/`, run the TypeScript build and tests.
+`src/` contains the OpenCode-native TypeScript runtime. After edits under `_shared/`, run the TypeScript build and tests.
 
 ## The Golden Rule
 

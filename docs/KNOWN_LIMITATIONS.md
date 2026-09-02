@@ -29,7 +29,3 @@ Re-running an earlier phase does not automatically invalidate later artifacts. U
 ## Provider sandbox constraints
 
 OpenCode runs with the run-local permissions configured by OSP. Network retrieval is controlled by `--network-policy`; offline runs must report unavailable external evidence. Review agents must write scratch files only under `.brain/tmp/` and may not modify the imported `source/` directory.
-
-## Python reference package
-
-`osp_cli/` remains as a behavior reference for migration tests. It is not the supported CLI distribution and does not expose the `osp` console entry points. Use the Node.js package and `install_cli.sh` for releases.

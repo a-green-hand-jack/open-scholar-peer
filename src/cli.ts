@@ -15,7 +15,7 @@ import { ReviewController } from "./controller.js";
 import { installRuntimeAssets } from "./config.js";
 
 const program = new Command();
-program.name("osp").description("OpenCode-native Open ScholarPeer review agent").version("2.0.0");
+program.name("osp").description("OpenCode-native Open ScholarPeer review agent").version("2.0.1");
 
 function repoRoot(): string {
   return resolve(fileURLToPath(new URL(".", import.meta.url)), "..");

@@ -9,7 +9,7 @@ npm install
 npm run typecheck
 npm run build
 npm test
-python3 -m unittest tests/test_osp_cli.py
+python3 -m unittest discover tests -p 'test_*.py'
 ```
 
 ## Changes

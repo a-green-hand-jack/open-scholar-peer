@@ -56,7 +56,7 @@ Provider failures and rate limits are recorded as unresolved provenance. They mu
 npm run typecheck
 npm run build
 npm test
-python3 -m unittest tests/test_osp_cli.py
+python3 -m unittest discover tests -p 'test_*.py'
 ```
 
 The old multi-tool adapter and installer system has been retired. Canonical Markdown assets are under `extensions/_shared/`; do not run or recreate the deleted adapter scripts.

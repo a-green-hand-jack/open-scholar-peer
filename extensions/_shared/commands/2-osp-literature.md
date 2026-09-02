@@ -24,8 +24,8 @@ Invoke the `osp-literature-review-agent` skill.
 
 ## Round definitions
 
-| # | Anchor | Goal | Primary LKM tools |
-|---|--------|------|-------------------|
+| # | Strategy | Goal | Primary LKM tools |
+|---|----------|------|-------------------|
 | 1 | `sub-domain-anchor` | Search using the paper's stated sub-domain and primary keywords | `search_bohrium_lkm` + `search_bohrium_paper` |
 | 2 | `method-anchor` | Search using the method's name and key technical terms | `search_bohrium_reasoning` + `get_bohrium_paper_graph` |
 | 3 | `temporal-expansion` | Filter to last 12 months; include arXiv pre-prints, concurrent submissions | `search_bohrium_paper` + `search_arxiv` |
@@ -44,7 +44,8 @@ Invoke the `osp-literature-review-agent` skill.
 3. Run the **next pending round only**:
    - Activate the `osp-literature-review-agent` skill for that round.
     - The skill searches using LKM first (`search_bohrium_lkm`, `search_bohrium_reasoning`, `search_bohrium_paper`, `get_bohrium_paper_graph`), plus arXiv and Semantic Scholar. Use Google Scholar only when an LKM call returns `{"error": ...}`.
-   - Write the round file (`02a`, `02b`, or `02c`) using the template at `defaults/round_strategy_template.md`.
+    - Write the round file (`02a`, `02b`, or `02c`) using the template at `defaults/round_strategy_template.md`.
+    - In the round artifact's `## Method`, write the exact marker `**Strategy:** \`<strategy-slug>\`` for the selected strategy.
 
 4. Update `session.json`:
    - Increment `phases.literature.rounds_completed`.
