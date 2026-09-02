@@ -19,6 +19,7 @@ export const RunStateSchema = z.object({
   current_phase: z.string().nullable().default(null),
   scope: z.record(z.unknown()),
   scope_digest: z.string().length(64),
+  review_contract: z.object({ labels: z.array(z.string().min(1)).min(1), source: z.string().min(1), rationale: z.string().min(1) }).nullable().default(null),
   created_at: z.string(),
   updated_at: z.string(),
   completed_at: z.string().nullable().default(null),

@@ -101,6 +101,18 @@ Try in order, stop at the first that succeeds:
 
 Set `venue.criteria_source` in `session.json` to `"web"`, `"user"`, or `"generic"` accordingly. Set `venue.source_url` if web-sourced. When the generic fallback is used, note which variant (`generic` or `generic-theoretical`) in `venue.criteria_source` notes so downstream personas and human readers can see which one applied.
 
+Also save a recommendation contract in `session.json.recommendation`:
+
+```json
+{
+  "labels": ["<closed label>", "..."],
+  "source": "venue | publication-decision fallback | preprint fallback",
+  "rationale": "<why this label set applies>"
+}
+```
+
+If the venue guidelines supply a closed recommendation vocabulary, copy those labels exactly and set `source` to `venue`. Otherwise use `accept`, `weak accept`, `borderline`, `weak reject`, `reject` for a venue that makes publication decisions; use `ready`, `ready with minor revisions`, `needs revision`, `needs major revision`, `not ready` for a preprint or other non-decision venue. Do not use per-finding values such as `insufficient evidence to judge` as a recommendation label.
+
 ### 5. Write `00_review_guidelines.md`
 
 Write the retrieved/provided/generic guidelines to `.brain/raw/00_review_guidelines.md` using the universal artifact structure (Method / Output / Provenance):

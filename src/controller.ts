@@ -5,6 +5,7 @@ import { now, readJson, writeJsonAtomic } from "./fs.js";
 import { COMMANDS, PHASES, type Phase } from "./phases.js";
 import { validatePhase } from "./validation.js";
 import { abortSession, createSession, prompt, startOpenCode, waitForIdle, type OpenCodeRuntime } from "./opencode.js";
+import { recommendationContract, recommendationFormat } from "./recommendation.js";
 
 type ControllerOptions = { workspace: string; mode: "autonomous" | "collaborative"; headless: boolean; model?: string; variant?: string; timeoutMs: number };
 
@@ -81,6 +82,17 @@ export class ReviewController {
     state.phases[phase] = { ...state.phases[phase], status: "running", attempts: (state.phases[phase]?.attempts ?? 0) + 1, started_at: now(), error: null };
     await writeJsonAtomic(join(this.options.workspace, ".osp-run", "run.json"), state);
     const command = await readFile(join(this.options.workspace, ".opencode", "commands", `${COMMANDS[phase]}.md`), "utf8");
+    const session = await readJson(join(this.options.workspace, ".brain", "session.json"));
+    const guidelines = await readFile(join(this.options.workspace, ".brain", "raw", "00_review_guidelines.md"), "utf8").catch(() => undefined);
+    const liveRecommendation = recommendationContract(session, guidelines);
+    if (phase !== "onboarding" && !state.review_contract) {
+      if (!liveRecommendation.valid) throw new Error("recommendation contract was not validly configured during onboarding");
+      state.review_contract = { labels: liveRecommendation.labels, source: liveRecommendation.source, rationale: liveRecommendation.rationale };
+      await writeJsonAtomic(join(this.options.workspace, ".osp-run", "run.json"), state);
+    }
+    const frozen = state.review_contract;
+    if (frozen && (JSON.stringify(frozen.labels) !== JSON.stringify(liveRecommendation.labels) || frozen.source !== liveRecommendation.source || frozen.rationale !== liveRecommendation.rationale)) throw new Error("recommendation contract changed after onboarding");
+    const recommendation = frozen ? { ...frozen, valid: true } : liveRecommendation;
     const promptText = `Execute only OSP phase ${phase} in this isolated, autonomous, report-only review workspace.
 
 Read .brain/session.json first and follow the installed command below exactly. Do not ask the user questions: use the configured venue/domain/default fallback and continue autonomously. Do not modify source/. Do not execute or advance another phase. Perform the file reads and writes yourself; do not merely describe the work. Unknown evidence must be marked unresolved or not assessable.
@@ -91,24 +103,31 @@ For onboarding, write .brain/raw/00_review_guidelines.md, create exactly one .br
 
 Follow the installed command below:
 
-    ${command}${phase === "literature" ? "\n\nLKM behavior: use the round's primary osp_search_bohrium_* tool first, then osp_get_bohrium_paper_graph on a returned top hit where required. Google Scholar is fallback only when the round's primary LKM search returns an error and no primary LKM search returned usable data; graph or PDF-extraction errors do not authorize fallback. Record actual tools and source IDs in Provenance. Optional PDF extraction is best-effort and must not block the three rounds." : ""}${phase === "review" ? "\n\nController validation is strict: the final file must contain exact level-two headings `## Summary`, `## Strengths`, `## Weaknesses`, `## Dimension Scores`, `## Assessment`, `## Recommendation`, and `## What was not checked`. Use exactly `## Recommendation`, not `Readiness Recommendation` or another alias. Under `## Dimension Scores`, use the exact five columns `Dimension | Score | What this band means here | Why this score | Evidence` and write exactly one row for every `session.json.qa_criteria` item. Each row must use the exact criterion label, a score such as `3/5` or `insufficient evidence to judge`, and a concrete artifact anchor in Evidence." : ""}`;
+    ${command}${phase === "literature" ? "\n\nLKM behavior: use the round's primary osp_search_bohrium_* tool first, then osp_get_bohrium_paper_graph on a returned top hit where required. Google Scholar is fallback only when the round's primary LKM search returns an error and no primary LKM search returned usable data; graph or PDF-extraction errors do not authorize fallback. Record actual tools and source IDs in Provenance. Optional PDF extraction is best-effort and must not block the three rounds." : ""}${phase === "review" ? `\n\nController validation is strict: the final file must contain exact level-two headings \`## Summary\`, \`## Strengths\`, \`## Weaknesses\`, \`## Dimension Scores\`, \`## Assessment\`, \`## Recommendation\`, and \`## What was not checked\`. Use exactly \`## Recommendation\`, not \`Readiness Recommendation\` or another alias. Under \`## Dimension Scores\`, use the exact five columns \`Dimension | Score | What this band means here | Why this score | Evidence\` and write exactly one row for every \`session.json.qa_criteria\` item. Each row must use the exact criterion label, a score such as \`3/5\` or \`insufficient evidence to judge\`, and a concrete artifact anchor in Evidence. The first non-empty line under \`## Recommendation\` must be ${recommendationFormat(recommendation)}. The justification must include this exact vocabulary-set rationale: \`${recommendation.rationale}\`. If any score is 0-2/5, that same first line must use the exact form \`**<controlled label>, conditional on <concrete required changes>**\`; do not invent a label or put the condition in a later paragraph.` : ""}`;
     try {
       const invocations = phase === "literature" ? 3 : 1;
       for (let round = 1; round <= invocations; round += 1) {
         await prompt(this.runtime!, this.options.workspace, this.sessionId!, `${promptText}\n\nThis is literature round ${round} of 3.` , this.options.model, this.options.variant);
         await waitForIdle(this.runtime!, this.options.workspace, this.sessionId!, this.options.timeoutMs, signal);
       }
-      let checks = await validatePhase(this.options.workspace, phase);
+      let checks = await validatePhase(this.options.workspace, phase, phase === "review" ? recommendation : undefined);
       let failed = checks.filter((check) => !check.passed);
       if (failed.length > 0) {
         const details = failed.map((check) => `${check.name}: ${check.detail}`).join("; ");
-        await prompt(this.runtime!, this.options.workspace, this.sessionId!, `The ${phase} phase output failed controller validation: ${details}. Remediate only this phase now. Write the missing or invalid artifacts and update .brain/session.json; do not advance to another phase.`, this.options.model, this.options.variant);
+        await prompt(this.runtime!, this.options.workspace, this.sessionId!, `The ${phase} phase output failed controller validation: ${details}. Remediate only this phase now. ${phase === "review" ? `For the recommendation check, the first non-empty line under \`## Recommendation\` must be ${recommendationFormat(recommendation)} and the justification must include \`${recommendation.rationale}\`. If any score is 0-2/5, write it on that same line exactly as \`**<controlled label>, conditional on <concrete required changes>**\`; do not add a \`Controlled label:\` prefix, invent a label, or put the condition in a later paragraph. ` : ""}Write the missing or invalid artifacts and update .brain/session.json; do not advance to another phase.`, this.options.model, this.options.variant);
         await waitForIdle(this.runtime!, this.options.workspace, this.sessionId!, this.options.timeoutMs, signal);
-        checks = await validatePhase(this.options.workspace, phase);
+        checks = await validatePhase(this.options.workspace, phase, phase === "review" ? recommendation : undefined);
         failed = checks.filter((check) => !check.passed);
       }
       if (failed.length > 0) throw new Error(`${phase} failed validation: ${failed.map((check) => `${check.name}: ${check.detail}`).join("; ")}`);
       const current = await this.state();
+      if (phase === "onboarding") {
+        const completedSession = await readJson(join(this.options.workspace, ".brain", "session.json"));
+        const completedGuidelines = await readFile(join(this.options.workspace, ".brain", "raw", "00_review_guidelines.md"), "utf8").catch(() => undefined);
+        const completedRecommendation = recommendationContract(completedSession, completedGuidelines);
+        if (!completedRecommendation.valid) throw new Error("onboarding did not produce a valid recommendation contract");
+        current.review_contract = { labels: completedRecommendation.labels, source: completedRecommendation.source, rationale: completedRecommendation.rationale };
+      }
       current.phases[phase] = { ...current.phases[phase], status: "completed", completed_at: now(), notes: `${phase} artifacts validated`, error: null };
       current.status = "prepared";
       current.updated_at = now();

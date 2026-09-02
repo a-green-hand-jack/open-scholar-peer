@@ -9,6 +9,11 @@
     "source_url": "",
     "criteria_source": "pending"
   },
+  "recommendation": {
+    "labels": [],
+    "source": "pending",
+    "rationale": ""
+  },
   "paper": {
     "title": "",
     "path": "",

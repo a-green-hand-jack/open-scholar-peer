@@ -2,6 +2,9 @@ import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { FIXED_OUTPUTS, LITERATURE_STRATEGIES, PHASES, type Phase } from "./phases.js";
 import { readJson } from "./fs.js";
+import { recommendationContract, recommendationFormat } from "./recommendation.js";
+import type { RecommendationContract } from "./recommendation.js";
+import { RunStateSchema } from "./state.js";
 
 export type Check = { name: string; passed: boolean; detail: string };
 
@@ -9,7 +12,7 @@ async function exists(path: string): Promise<boolean> {
   try { await stat(path); return true; } catch { return false; }
 }
 
-export async function validatePhase(workspace: string, phase: Phase): Promise<Check[]> {
+export async function validatePhase(workspace: string, phase: Phase, expectedRecommendation?: RecommendationContract): Promise<Check[]> {
   const checks: Check[] = [];
   const session = await readJson(join(workspace, ".brain", "session.json")) as { qa_criteria?: Array<{ slug?: string }>; qa_pairs_per_criterion?: number; phases?: Record<string, { status?: string; completed_at?: string; notes?: string }> };
   const outputs = phase === "qa"
@@ -40,6 +43,10 @@ export async function validatePhase(workspace: string, phase: Phase): Promise<Ch
       checks.push({ name: `${relative}:qa-count`, passed: Number.isInteger(count) && count > 0 && (templatedPairs || labelledPairs), detail: `expected ${count} ordered pairs` });
     }
   }
+  if (phase === "onboarding") {
+    const contract = recommendationContract(session);
+    checks.push({ name: "onboarding:recommendation-contract", passed: contract.valid, detail: "session.json.recommendation must contain unique labels plus a non-pending source and rationale" });
+  }
   if (phase === "literature") {
     for (const [index, strategy] of LITERATURE_STRATEGIES.entries()) {
       const path = join(workspace, FIXED_OUTPUTS.literature[index]);
@@ -69,12 +76,18 @@ export async function validatePhase(workspace: string, phase: Phase): Promise<Ch
     const actualLabels = new Set(scoreRows.map((cells) => cells[0].toLowerCase()));
     const validScore = (value: string) => /^(?:[0-5]\s*\/\s*5|insufficient evidence to judge)$/i.test(value.trim());
     checks.push({ name: "review:score-rows", passed: scoreRows.length === criteria.length && actualLabels.size === criteria.length && [...actualLabels].every((label) => expectedLabels.has(label)) && scoreRows.every((cells) => validScore(cells[1]) && cells.slice(2, 5).every(Boolean) && /(?:\.md|paper §|paper section)/i.test(cells[4])), detail: `${scoreRows.length} five-column evidenced rows for ${criteria.length} criteria` });
-    const recommendationBody = review.split(/^#{2,3} (?:Decision )?Recommendation[ \t]*$/im)[1]?.split(/^#{2,3} /m)[0] ?? "";
+    const recommendationBody = review.split(/^## Recommendation[ \t]*$/m)[1]?.split(/^## /m)[0] ?? "";
     const recommendation = recommendationBody.split("\n").map((line) => line.trim().replace(/^\*\*(.*)\*\*$/, "$1").replace(/^[-*]\s+/, "").trim()).find(Boolean) ?? "";
-    const allowed = /^(?:weak accept|weak reject|ready with minor revisions|needs major revision|accept|borderline|reject|ready|needs revision|not ready|not enough evidence)(?:\s*,?\s+conditional on\s+.+)?$/i;
+    const guidelines = await readFile(join(workspace, ".brain", "raw", "00_review_guidelines.md"), "utf8").catch(() => undefined);
+    const sessionContract = recommendationContract(session, guidelines);
+    const contract = expectedRecommendation ?? sessionContract;
+    const escapedLabels = contract.labels.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    const allowed = new RegExp(`^(?:${escapedLabels.join("|")})(?:,\\s+conditional on\\s+.+)?$`);
     const lowScore = scoreRows.some((cells) => /^(?:[0-2])\s*\/\s*5$/i.test(cells[1]));
     const conditional = /\bconditional on\b/i.test(recommendation);
-    checks.push({ name: "review:recommendation", passed: allowed.test(recommendation) && (!lowScore || conditional), detail: lowScore ? "controlled label and conditional on clause required for scores 0-2" : "controlled recommendation vocabulary" });
+    const rationalePresent = recommendationBody.includes(contract.rationale);
+    checks.push({ name: "review:recommendation", passed: contract.valid && allowed.test(recommendation) && (!lowScore || conditional) && rationalePresent, detail: lowScore ? `first recommendation line must be ${recommendationFormat(contract)} with an inline ', conditional on <required changes>' clause for scores 0-2 and the justification must state '${contract.rationale}'` : `first recommendation line must use ${recommendationFormat(contract)} and the justification must state '${contract.rationale}'` });
+    if (expectedRecommendation) checks.push({ name: "review:recommendation-contract", passed: sessionContract.valid && JSON.stringify(sessionContract.labels) === JSON.stringify(expectedRecommendation.labels) && sessionContract.source === expectedRecommendation.source && sessionContract.rationale === expectedRecommendation.rationale, detail: "review phase must not alter the controller-owned recommendation contract" });
     checks.push({ name: "review:evidence-anchor", passed: /(?:\.brain\/raw\/01_structured_summary\.md|01_structured_summary\.md)/.test(review), detail: "summary artifact anchor" });
   }
   const phaseState = session.phases?.[phase];
@@ -84,6 +97,12 @@ export async function validatePhase(workspace: string, phase: Phase): Promise<Ch
 
 export async function validateRun(workspace: string): Promise<Check[]> {
   const checks: Check[] = [];
-  for (const phase of PHASES) checks.push(...await validatePhase(workspace, phase));
+  const state = RunStateSchema.parse(await readJson(join(workspace, ".osp-run", "run.json")));
+  for (const phase of PHASES) {
+    const expectedRecommendation = phase === "review" && state.review_contract
+      ? { ...state.review_contract, valid: true }
+      : undefined;
+    checks.push(...await validatePhase(workspace, phase, expectedRecommendation));
+  }
   return checks;
 }
