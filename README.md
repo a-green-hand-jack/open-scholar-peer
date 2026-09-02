@@ -12,13 +12,23 @@ export PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:$PATH"
 osp doctor
 ```
 
-For a checkout:
+To install from a checkout instead of the published `main` branch:
+
+```bash
+OSP_SOURCE_DIR="$PWD" bash install_cli.sh
+export PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:$PATH"
+```
+
+For development, build and invoke the CLI directly:
 
 ```bash
 npm install
 npm run build
 node dist/cli.js review ./paper.pdf
 ```
+
+See [`docs/OSP_CLI.md`](docs/OSP_CLI.md) for the complete user guide,
+dependency list, workflow, and recovery procedures.
 
 ## Review
 
@@ -27,6 +37,24 @@ osp review ./paper.pdf
 osp review ./paper.pdf --headless --mode autonomous --model openai/gpt-5.6-sol
 osp review ./paper.zip --output ./osp-review --mode collaborative
 ```
+
+For the recommended online run with Bohrium LKM enabled:
+
+```bash
+npm install -g @dptech-corp/bohr-cli
+bohr auth login
+osp review ./paper.pdf \
+  --output ./osp-review \
+  --headless \
+  --mode autonomous \
+  --model <provider/model> \
+  --allow-lkm-spend
+```
+
+`--allow-lkm-spend` is required for billable LKM calls. Without it, OSP can
+still run with the other available literature providers and records LKM as
+unavailable. Use `--prepare-only` to validate the input and local runtime
+before starting a model session.
 
 Without `--headless`, OSP starts an OpenCode server and attaches the native `opencode attach` TUI. `--headless` uses the same controller without attaching a terminal UI. Modes are `autonomous` and `collaborative`; the latter pauses at phase gates until approved.
 
@@ -54,6 +82,26 @@ Literature has three auditable rounds. Q&A creates exactly the configured number
 Each run is isolated and contains `.brain/` artifacts, `.osp-run/` controller state, `.opencode/` OSP assets, a read-only `source/`, and Git checkpoint commits. Source manifests, digests, unresolved evidence, model metadata, and retrieval provenance are retained in the run workspace.
 
 Supported inputs are PDF files, TeX directories, ZIP/TAR archives, and existing OSP workspaces. Sensitive files, symlinks, special files, archive path escapes, and external directory access are rejected.
+
+## Dependencies
+
+The runtime requires Node.js 20+, OpenCode 1.18.25+, Python 3.10+ with
+`venv`/`ensurepip`, Git, and Poppler `pdftotext` for PDF input. Online runs
+also need network access to the selected model provider and literature
+providers. The per-run MCP Python environment is installed automatically.
+
+Optional integrations are Bohrium `bohr` CLI for LKM retrieval and a Semantic
+Scholar API key for higher rate limits. Check the local installation with:
+
+```bash
+node --version
+python3 --version
+python3 -c "import ensurepip, venv"
+pdftotext -v
+git --version
+opencode --version
+osp doctor
+```
 
 ## Development
 
