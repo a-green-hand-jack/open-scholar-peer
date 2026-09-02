@@ -19,8 +19,7 @@ Tell the user which round is about to run, what its goal is, and what tools will
 ── Literature Review — Round N/3 ────────────────────────
 Strategy: <sub-domain anchor | method anchor | temporal expansion>
 Goal:     <one sentence — what this round is trying to find>
-Tools:    bohrium_lkm (primary) + arxiv + semantic_scholar + web search
-          (google_scholar is FALLBACK only when LKM is unavailable)
+Tools:    Bohrium LKM  +  arxiv  +  semantic_scholar  +  Google Scholar fallback
 Writes:   .brain/raw/02N_literature_round<N>.md
 Effort:   ~8-12 tool calls, ~1-2 min
 ─────────────────────────────────────────────────────────
@@ -69,37 +68,18 @@ budget), do not attempt it inside this skill — just proceed without seeds.
 
 ## Tools
 
-**LKM-first dispatch (primary "broader coverage" source).** Bohrium LKM is a
-semantic + keyword index over scientific claims, abstracts, conclusions, and
-reasoning chains. It returns structured results in ~3 s and is fixed-price
-(0.05 CNY/call; LKM's personal monthly 1,000-call quota covers the first calls
-of each month). Four tools, all contributed by OSP MCP:
+In each round, dispatch that round's primary LKM search together with arXiv and Semantic Scholar. After results return, expand a top LKM paper graph where the round calls for it:
 
-- `osp-mcp.search_bohrium_lkm(query, top_k=10, scopes="conclusion,abstract")` — claims + paper records
-- `osp-mcp.search_bohrium_reasoning(query, top_k=10)` — reasoning chains ("same technique" hits)
-- `osp-mcp.search_bohrium_paper(query, size=10, year_from, year_to, jcr)` — paper records with year/JCR filters
-- `osp-mcp.get_bohrium_paper_graph(paper_id, max_nodes=25, max_edges=40)` — expand a key paper's graph
-
-`session.json.mcp.bohrium_available` is an advisory flag. **Always attempt the LKM
-tools first** (the default flag value is `false` in headless runs where a shell
-probe cannot run). Fall back to Google Scholar **only** when an LKM tool
-actually returns `{"error": ...}`:
-
-- `osp-mcp.search_google_scholar` / `osp-mcp.search_google_scholar_advanced` — slower best-effort HTML scrape; never prefer it while LKM is reachable
-
-**Supporting tools (still used in every round where available):**
-
+- `osp-mcp.search_bohrium_lkm` — claims, conclusions, and abstracts
+- `osp-mcp.search_bohrium_reasoning` — method reasoning chains
+- `osp-mcp.search_bohrium_paper` — structured metadata and year filters
+- `osp-mcp.get_bohrium_paper_graph` — bounded top-hit expansion
 - `osp-mcp.search_arxiv` — pre-prints
 - `osp-mcp.search_semantic_scholar` — citation graph, well-indexed publications
-- Native `Web Search` (when your host tool provides one) — non-academic mentions, news, blog summaries
+- `osp-mcp.search_google_scholar` — fallback only after an LKM error
+- Native `Web Search` (when available) — only for non-academic context
 
-In **every round** you MUST dispatch the retrieval tools **simultaneously** — not
-sequentially. Fire the round's LKM tools and the supporting tools in the same
-dispatch batch. Each tool gets a query formulation tailored to its index: the
-arxiv query stresses category + keywords, the semantic_scholar query stresses
-citations + field-of-study, the LKM queries use natural-language claim- or
-reasoning-oriented phrasing, and the fallback on Google Scholar/web search adds
-the venue name for recency. Do not wait for one result before starting the next.
+LKM availability is advisory, not a gate. Never claim LKM is unavailable without attempting a call. Use Google Scholar only when the round's primary LKM search returns an error and no primary LKM search returned usable data. Graph and PDF-extraction errors do not authorize fallback. Record actual tools, queries, paper IDs, errors, and fallback decisions in Provenance.
 
 Relying on only one source biases the corpus. A paper that ranks low in one index may be the top result in another.
 

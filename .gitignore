@@ -37,3 +37,7 @@ __pycache__/
 # Python build output
 /build/
 /*.egg-info/
+
+# Node build/dependency output
+node_modules/
+/dist/

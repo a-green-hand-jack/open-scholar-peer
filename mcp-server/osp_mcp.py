@@ -60,7 +60,6 @@ async def _run(fn, *args, **kwargs) -> Any:
     except asyncio.TimeoutError:
         raise TimeoutError(f"{fn.__name__} timed out after {_TIMEOUT}s")
 
-
 # ---------- arXiv ----------------------------------------------------------
 
 @mcp.tool()

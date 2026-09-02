@@ -5,30 +5,21 @@
 
 ## What this project is
 
-Open ScholarPeer (OSP) implements the paper *"ScholarPeer: A Context-Aware Multi-Agent Framework for Automated Peer Review"* as a portable set of skills, slash commands, and an MCP server that install into a user's project across 14 AI tools (Claude Code, Cursor, Gemini CLI, Copilot CLI, Antigravity, Antigravity CLI, Codex CLI, Qwen Code, OpenCode, Junie, Kiro, Kimi Code, Mistral Vibe, OpenHands).
+Open ScholarPeer (OSP) implements the paper *"ScholarPeer: A Context-Aware Multi-Agent Framework for Automated Peer Review"* as an independent OpenCode-native TypeScript Agent with a TUI, headless CLI, MCP server, and isolated review workspaces.
 
-**There is no runtime code.** OSP is configuration-as-code. The library is the prompts and the sync infrastructure that keeps them consistent across tools.
+The TypeScript runtime owns phase orchestration, validation, input isolation, checkpointing, and OpenCode sessions. The library assets remain Markdown prompts and domain guidance.
 
 ## Commands you will actually run
 
 ```bash
-# After any edit under extensions/_shared/, regenerate adapters:
-python3 scripts/sync_adapters.py
+# TypeScript runtime checks:
+npm run typecheck
+npm run build
+npm test
 
-# Validate per-tool parity (must pass before any commit touching _shared/):
-python3 scripts/test_parity.py
-
-# Smoke-test all 14 installers in temp dirs (must pass before tagging release):
-bash scripts/test_install.sh
-
-# Syntax-check shell scripts:
-for f in install.sh scripts/*.sh; do bash -n "$f" && echo "  ✓ $f" || echo "  ✗ $f"; done
-
-# AST-check Python files (no formal linter configured):
-python3 -c "import ast; [ast.parse(open(f).read()) for f in ['mcp-server/osp_mcp.py','scripts/sync_adapters.py','scripts/merge_mcp_config.py','scripts/test_parity.py','scripts/build_cli_assets.py','osp_cli/runtime.py','osp_cli/cli.py']]"
-
-# Standalone CLI offline tests:
-python3 -m unittest tests/test_osp_cli.py
+# Python MCP checks:
+python3 -c "import ast; ast.parse(open('mcp-server/osp_mcp.py').read()); ast.parse(open('mcp-server/providers/bohrium.py').read())"
+python3 -m unittest discover tests -p 'test_*.py'
 
 # Run the MCP server standalone (debug mode):
 cd mcp-server && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/python osp_mcp.py
@@ -36,36 +27,31 @@ cd mcp-server && python3 -m venv .venv && .venv/bin/pip install -r requirements.
 
 ## Architecture (one paragraph)
 
-`extensions/_shared/` is the canonical source: 8 commands + 8 skills + rules + defaults + a manifest. `scripts/sync_adapters.py` regenerates 14 per-tool adapter directories under `extensions/.{claude,cursor,gemini,agent,agents,github,junie,kiro,codex,kimi,qwen,vibe,opencode,openhands}/`. Per-tool installers (`scripts/install_*.sh`) copy the adapter into the user's project, run `init_brain.sh` to scaffold `.brain/`, run `init_mcp.sh` to set up a self-contained Python venv at `.open-scholar-peer/mcp/`, and either auto-merge the MCP server into the tool's config (`merge_mcp_config.py`) or emit a paste-ready snippet for tools with TOML / global / non-standard configs. State during a review lives at `<user-project>/.brain/` (gitignored).
+`extensions/_shared/` is the canonical source for OSP commands, personas, rules, and defaults. The TypeScript runtime copies these assets directly into an isolated review workspace. State during a review lives at `<review-workspace>/.brain/` (gitignored).
 
-`osp_cli/` adds a standalone OpenCode-native runner. It packages a generated
-OpenCode adapter bundle under `osp_cli/_assets/`; this bundle is never edited
-directly. After edits under `_shared/`, run `sync_adapters.py` and then
-`build_cli_assets.py` before testing or publishing the CLI.
+`src/` contains the OpenCode-native TypeScript runtime. After edits under `_shared/`, run the TypeScript build and tests.
 
 ## The Golden Rule
 
-**Never edit `extensions/.{claude,cursor,gemini,agent,agents,github,junie,kiro,codex,kimi,qwen,vibe,opencode,openhands}/` directly.** They are generated. Edit `extensions/_shared/` and re-run sync.
+The old per-tool adapter directories are retired. Edit `extensions/_shared/`; the TypeScript runtime installs those canonical assets directly.
 
 ## Code style
 
 - **Python:** PEP 8, type hints encouraged, modern syntax (`dict[str, Any]` not `Dict`). Stdlib first; new dependencies need a justification.
 - **Bash:** always `set -e`; use `[[...]]` not `[...]`; quote all expansions; prefer `command -v X` over `which X`.
-- **Markdown:** no HTML in canonical content (sync script's parser is intentionally simple). Fenced code blocks with language tags.
-- **Frontmatter** on commands/skills is YAML but parsed by a home-grown parser in `sync_adapters.py` — keep it shallow (no nested objects, no anchors).
+- **Markdown:** no HTML in canonical content. Fenced code blocks with language tags.
+- **Frontmatter** on commands/skills is shallow YAML consumed by the runtime; keep it free of nested objects and anchors.
 - **Comments:** only when they explain a non-obvious WHY. Don't restate what code does. Don't reference the current PR or task in comments — that belongs in commit messages.
 
 ## Common gotchas
 
-- `extensions/` has DOTFILE subdirs (`.claude`, `.cursor`, …). `ls extensions/` doesn't show them — use `ls -la`. `git add extensions/` does pick them up.
-- `/.agents/` at repo root is leftover unrelated tooling, gitignored. The OSP Antigravity adapter is at `extensions/.agent/`, and the Antigravity CLI adapter is at `extensions/.agents/`. Do not confuse them.
+- `/.agents/` at repo root is leftover unrelated tooling and is gitignored. Do not treat it as part of OSP.
 - `reviewer-os/` at repo root is an external reference (gitignored), not part of OSP.
 - When adding or renaming a command/skill, update **both** `extensions/_shared/MANIFEST.md` and `docs/ARTIFACT_CONTRACTS.md`.
-- Q&A behavior differs per tool: Antigravity (legacy), Mistral Vibe, OpenHands fall back to self-reflection (no/partial subagents); the other 11 use subagent isolation. Logic lives in `sync_adapters.py::adapt_qa_body_for_tool()`.
+- Q&A uses OpenCode subagent isolation. Autonomous runs deny questions; collaborative runs permit them and pause at controller-owned gates.
 - Paper hyperparameters: `k=3` literature rounds is fixed (enforced via 3 round files); `N_QA` is **user-configurable** at `/5-osp-qa` start (default 2 pairs/criterion, persisted as `session.json.qa_pairs_per_criterion`). The Q&A template renders `### Q1`…`### QN` from that field.
-- Tools that share the project-root `AGENTS.md` surface (Copilot, Codex, Kimi, Vibe, OpenCode, OpenHands) all merge through `scripts/merge_agents_md.sh` using `<!-- OSP-BEGIN/OSP-END -->` markers. Do not roll your own merge logic.
 - The MCP server runs as a subprocess of the host tool over stdio. To debug, run `python3 mcp-server/osp_mcp.py` standalone — it'll wait for MCP protocol messages and surface any startup errors.
-- `init_mcp.sh` copies `mcp-server/` into `<user-project>/.open-scholar-peer/mcp/` and builds a venv there. The dev repo's `mcp-server/` is the source; the per-project copy is the runtime.
+- `src/config.ts` copies `mcp-server/` into `<review-workspace>/.open-scholar-peer/mcp/` and builds a venv there. The dev repo's `mcp-server/` is the source; the per-run copy is the runtime.
 
 ## Where things live
 
@@ -75,25 +61,14 @@ extensions/_shared/             ← Edit here. Single source of truth.
   ├── skills/                    8 personas (orchestrator + 7 paper agents)
   ├── rules/osp-rules.md         Always-on rules
   ├── defaults/                  Templates that enforce structure
-  └── MANIFEST.md                Sync-script catalog
-
-extensions/.{claude,cursor,gemini,agent,agents,github,
-            junie,kiro,codex,kimi,qwen,vibe,opencode,openhands}/   ← Generated. Don't edit.
+  └── MANIFEST.md                Canonical asset catalog
 
 mcp-server/
   ├── osp_mcp.py                 FastMCP server entrypoint
   └── providers/                 arxiv / semantic_scholar / google_scholar
                                  (drop a new module here to add a provider)
 
-scripts/
-  ├── sync_adapters.py           _shared/ → per-tool adapters
-  ├── merge_mcp_config.py        Safe JSON merge into tool MCP config
-  ├── merge_agents_md.sh         Idempotent merge into project-root AGENTS.md/QWEN.md
-  ├── clean_adapter.sh           Wipes OSP-managed files before re-copy (per tool)
-  ├── init_brain.sh              .brain/ scaffolding (called by installers)
-  ├── init_mcp.sh                .open-scholar-peer/mcp/ setup (called by installers)
-  ├── install_*.sh               One per tool (14 total)
-  └── test_*.{py,sh}             Parity validator + installer smoke
+src/                              TypeScript CLI, controller, input, validation, and OpenCode integration
 
 docs/
   ├── PHASES.md                  Build plan, exit criteria
@@ -108,12 +83,11 @@ docs/
 
 ## Doing a release
 
-1. `python3 scripts/sync_adapters.py`
-2. `python3 scripts/test_parity.py` (must pass)
-3. `bash scripts/test_install.sh` (must pass)
-4. **Manual:** run `bash install.sh` in a fresh temp dir, drive `/0-osp-onboarding` and `/1-osp-summary` on `docs/paper/scholar_peer_arxiv.pdf` in your tool of choice. Verify `.brain/raw/01_structured_summary.md` has Method/Output/Provenance sections.
+1. `npm run typecheck`
+2. `npm run build`
+3. `npm test`
+4. Run `osp doctor`, `--prepare-only`, and a real headless review on the sample PDF.
 5. Update `docs/PHASES.md` checkboxes.
-6. `git tag` + `git push --tags`.
 
 ## Out of scope
 
@@ -121,7 +95,7 @@ docs/
 - `src/frontend` (Deep Agents UI fork) — deferred.
 - Plugin marketplace integrations — explicitly avoided (vendor lock-in).
 - PyPI publishing of `osp-mcp` — deferred; current model is self-contained venv per project.
-- CI drift checks — manual today; future GH Actions running `test_parity.py`.
+- CI release checks are manual today.
 - Multi-paper sessions — currently one paper per `.brain/`.
 
 ## Pointers
@@ -191,5 +165,5 @@ After the phase completes, the closing report block must say **what was done** (
 - `.brain/` is gitignored — never commit it.
 - `.open-scholar-peer/` (MCP server + venv) is gitignored — never commit it.
 - Tool-specific config files (`.mcp.json`, `.claude/`, etc.) at project root are user-editable.
-- Adapter content under `extensions/.{tool}/` in this repo is **generated by the sync script** — edit `extensions/_shared/` instead and re-run `scripts/sync_adapters.py`.
+- The TypeScript runtime copies canonical assets from `extensions/_shared/` into isolated review workspaces. Edit `_shared/` and verify with `npm test`.
 <!-- OSP-END -->

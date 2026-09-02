@@ -1,207 +1,239 @@
-# OpenCode-native OSP CLI
+# OSP CLI User Guide
 
-`osp` is the standalone Open ScholarPeer runner. It owns input isolation,
-OpenCode invocation, phase ordering, checkpoints, provenance, and final-review
-export. It does not replace the canonical OSP commands, skills, defaults, or
-adapter generation under `extensions/_shared/`.
+The standalone OSP CLI is the supported distribution for Open ScholarPeer. It is a Node.js/TypeScript application that owns the review controller and uses OpenCode as its agent runtime.
 
-## Install
+## What OSP Does
 
-One-command installation from GitHub:
+Open ScholarPeer (OSP) is an OpenCode-native paper review agent. The OSP
+controller prepares an isolated workspace, imports a paper without modifying
+the original, starts an OpenCode session, runs the fixed seven-stage protocol,
+validates every stage artifact, and writes a final structured review.
+
+The supported product is the TypeScript/Node.js CLI. The native OpenCode TUI is
+the default interface; headless mode uses the same controller for unattended
+runs.
+
+## Dependencies
+
+Required on the host:
+
+| Dependency | Minimum | Purpose |
+| --- | --- | --- |
+| Node.js | 20+ | Runs the OSP CLI |
+| npm | Node-compatible | Installs and builds OSP |
+| OpenCode | 1.18.25+ | Agent runtime, model access, and TUI |
+| Python | 3.10+ | Runs the per-run MCP server |
+| Python `venv` and `ensurepip` | available | Creates the isolated MCP environment |
+| Git | available | Creates auditable phase checkpoints |
+| Poppler `pdftotext` | available for PDF input | Extracts PDF text |
+
+The selected OpenCode provider/model must already be configured and usable.
+OSP does not store model credentials in the paper, workspace artifacts, or
+command arguments.
+
+Online runs require network access to the model provider and literature
+providers. Offline mode disables web access and does not prepare the networked
+MCP server.
+
+### Optional Providers
+
+Bohrium LKM is the primary broad-coverage literature source when installed and
+authenticated:
+
+```bash
+npm install -g @dptech-corp/bohr-cli
+bohr auth login
+bohr auth status
+```
+
+The CLI must also receive `--allow-lkm-spend` for each run that may make
+billable LKM calls. LKM search calls cost approximately `0.05 CNY` each;
+optional PDF parsing costs approximately `1.00 CNY` initially or `0.10 CNY`
+for a cache hit. OSP never handles or logs Bohrium credentials.
+
+Semantic Scholar works without a key under anonymous rate limits. Set a key
+only when higher rate limits are needed:
+
+```bash
+export SEMANTIC_SCHOLAR_API_KEY="<your-key>"
+```
+
+## Installation
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/a-green-hand-jack/open-scholar-peer/main/install_cli.sh | bash
-```
-
-The script downloads the selected revision, finds Python 3.10+ with `pip` and
-`venv`, and
-installs both `osp` and `open-scholar-peer` into an isolated user-owned virtual
-environment. Set `OSP_REPOSITORY=owner/repo` or `OSP_REF=branch-or-commit`
-before the command to use a fork, non-main branch, or reviewed commit. Set
-`OSP_INSTALL_DIR` or `OSP_BIN_DIR` to choose the venv and command locations.
-The installer runs `osp doctor` using the installed path. For the default
-command location, add it to your shell `PATH` before invoking `osp` yourself:
-
-```bash
-export PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:$PATH"
 osp doctor
 ```
 
-From a source checkout, install the checked-out revision instead:
+The installer copies OSP into an isolated data directory, installs Node
+dependencies, builds the CLI, and creates `osp` and `open-scholar-peer` links
+under `${XDG_BIN_HOME:-$HOME/.local/bin}`. It refuses to overwrite an
+unrelated executable at either link path.
+
+To install from the current checkout instead of the published `main` branch:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install .
-.venv/bin/osp doctor
+OSP_SOURCE_DIR="$PWD" bash install_cli.sh
+export PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:$PATH"
 ```
 
-This installs both `osp` and `open-scholar-peer` command names. The wheel
-contains a generated OpenCode adapter bundle; regenerate it after changing
-canonical adapter content:
+For development:
 
 ```bash
-python3 scripts/sync_adapters.py
-python3 scripts/build_cli_assets.py
+npm install
+npm run build
+node dist/cli.js doctor
 ```
 
-On Linux, reviews require Bubblewrap (`bwrap`) for filesystem isolation. The
-CLI also requires OpenCode 1.18.0 or newer.
+Verify the selected executable after either installation method:
 
-## Review
+```bash
+command -v osp
+osp --version
+osp doctor
+```
+
+## First Run
+
+Validate the input and local setup without starting OpenCode:
+
+```bash
+osp review ./paper.pdf --output ./osp-review --prepare-only
+```
+
+Then start a complete autonomous headless review:
 
 ```bash
 osp review ./paper.pdf \
   --output ./osp-review \
-  --venue arxiv \
-  --mode autonomous \
   --headless \
-  --model openai/gpt-5.6-sol \
-  --variant medium
+  --mode autonomous \
+  --model <provider/model> \
+  --allow-lkm-spend
 ```
 
-Supported inputs are PDFs, TeX source directories, `.zip` / `.tar.gz` source
-archives, and an existing OSP workspace. Every invocation creates a new
-timestamped directory below `--output`; it never edits the input source. The
-stable exported review is `--output/final_review.md`, while the complete run —
-including its `.brain/` state — is in `--output/osp-<timestamp>-<digest>/` (see
-[Run directory layout](#run-directory-layout)).
+Replace `<provider/model>` with a model already configured in OpenCode. Omit
+`--allow-lkm-spend` when LKM spending is not authorized; the run will use
+other available providers and retain the limitation in provenance.
 
-`--headless` is an explicit opt-in to OpenCode's autonomous permission mode.
-The CLI runs only in an isolated workspace, instructs the agent to write only
-review artifacts, records the policy in provenance, and does not copy `.env`,
-credentials, `.git`, old `.brain` artifacts, or `.open-scholar-peer` runtimes.
-
-Optional inputs include `--domain`, `--brief`, `--previous-review`, and
-`--revision-context`. `--provider` prefixes a model which lacks a provider
-component. `--timeout` applies to each OpenCode phase. `--network-policy` is
-recorded in the locked run scope for auditable retrieval behavior.
-
-## Lifecycle commands
+## Runtime
 
 ```bash
-osp doctor
-osp status ./osp-review
-osp validate ./osp-review
-osp checkpoint ./osp-review
-osp resume ./osp-review
+osp review <pdf-or-tex-source> [options]
 ```
 
-When the output directory contains more than one run, pass the full printed run
-directory instead of its parent.
+The command creates a timestamped isolated workspace, imports the source, installs canonical OSP assets from `extensions/_shared`, prepares the local MCP server, initializes Git state, and starts the fixed seven-phase controller. Native TUI mode is the default. `--headless` uses the same controller without attaching `opencode attach`. `--qa-pairs` persists the positive number of ordered Q&A pairs per criterion.
 
-`resume` refuses a run whose locked input digest or invocation scope has
-changed. It resumes from the first incomplete/invalid phase and retains logs,
-session state, artifacts, and every phase checkpoint. Final export is rejected
-until phases 0–5 completed under the artifact contract.
+Important options are `--mode autonomous|collaborative`, `--model provider/model`, `--variant`, `--timeout`, `--qa-pairs`, `--network-policy online|offline`, `--output`, `--prepare-only`, and `--allow-lkm-spend`.
 
-Use `--prepare-only` to validate import and provenance without contacting an
-OpenCode provider. `--trail <directory>` produces a non-overwriting local trail
-containing the final review and minimum reproduction metadata. `--upload`
-requires both the explicit flag and `--trail-repo`; upload failure returns a
-non-zero status.
+Supported input types are PDF files, TeX directories, ZIP/TAR archives, and
+existing OSP workspaces. Input is copied into a read-only `source/` directory;
+symlinks, special files, sensitive credentials, archive path traversal, and
+external directory access are rejected.
 
-## Run directory layout
+`--qa-pairs <count>` defaults to `2` and controls the number of ordered Q&A
+pairs generated for every criterion. Larger values increase model usage and
+runtime.
 
-Each run is a self-contained workspace below `--output` (the printed
-`osp-<timestamp>-<digest>-<rand>` directory). Nothing about a run lives in the
-caller's working directory except through the explicit input and `--output`
-paths; in particular `.brain/` is created **inside** the run directory, never
-at your project root and never next to the input paper.
-
-```
-<output>/
-├── final_review.md                  ← stable exported review (after completion)
-└── osp-<timestamp>-<digest>-<rand>/
-    ├── .brain/                      ← session state and phase artifacts
-    │   ├── session.json             ← run state machine (venue, criteria, phases)
-    │   ├── input/                   ← paper.md + paper.pdf (imported text)
-    │   ├── raw/                     ← 00…06 phase artifacts
-    │   ├── review/final_review.md   ← canonical final review
-    │   └── tmp/                     ← agent scratch space
-    ├── source/                      ← read-only copy of the imported paper
-    ├── .opencode/                   ← generated OpenCode adapter bundle
-    ├── opencode.json                ← run-local OpenCode config (agent `osp-runner`)
-    ├── .osp-run/                    ← CLI-owned state
-    │   ├── run.json                 ← status, scope, provenance, phase table
-    │   ├── source-manifest.json     ← input digest manifest
-    │   ├── checkpoints/             ← phase checkpoints (scope-locked)
-    │   ├── logs/                    ← per-phase OpenCode event logs
-    │   └── opencode-state/          ← OpenCode's sandbox-local state dir
-    ├── .open-scholar-peer/mcp/      ← isolated MCP venv (unless `--no-mcp`)
-    └── AGENTS.md                    ← report-only agent contract for the run
-```
-
-## How a run executes
-
-`osp review` (and `osp resume`) drives the seven OSP phases in order:
-
-`onboarding` → `summary` → `literature` → `historian` → `baseline_scout` →
-`qa` → `review`
-
-- Each phase is one `opencode run` invocation against the run-local
-  `osp-runner` agent, except `literature`, which runs 3 strategy rounds
-  (`k=3`, one invocation per round) before the phase is marked complete.
-- After each invocation the CLI re-validates the phase artifacts against the
-  artifact contract (required files, `## Method` / `## Output` / `## Provenance`
-  sections, no unresolved templates, exact Q&A pair count, round strategy
-  labels, final-review dimension table and recommendation vocabulary) before
-  advancing.
-- Phases may only write inside `.brain/` (plus `.brain/tmp/` scratch). The CLI
-  snapshots `.brain/` and the workspace before each invocation and rejects a
-  phase that wrote outside its contract.
-- A checkpoint is written after preparation and after every phase. `resume`
-  refuses any run whose input digest, invocation options, checkpoint artifacts,
-  or session state diverged from the last legal checkpoint; it resumes from the
-  first incomplete/invalid phase, then re-validates and exports.
-- On completion the CLI exports the canonical review to
-  `<output>/final_review.md`, then optionally writes an immutable trail
-  (`--trail`) or uploads it (`--upload --trail-repo`).
-
-## Provider and sandbox notes
-
-On Linux every OpenCode invocation runs inside a Bubblewrap sandbox that
-exposes only the minimum host state:
-
-- `~/.opencode` and `~/.config/opencode` (`account-keys/` key files included)
-  are mounted read-only;
-- the OpenCode auth store `~/.local/share/opencode/auth.json` is mounted
-  read-only when present;
-- DNS resolves through `/run/systemd/resolve` on Ubuntu;
-- everything else — other home directories, environment variables containing
-  API keys — is invisible inside the sandbox.
-
-The model provider therefore must be **self-contained under
-`~/.config/opencode`**. For example `--model apex/gpt-5.6-sol` works because
-the Apex key is read from `account-keys/apex-gpt.key` inside the mounted
-config. Virtual routers whose backends read host credentials outside
-`~/.config/opencode` (e.g. `gpt-priority`, which loads Codex OAuth files from
-`~/.codex`) fail to initialize inside the sandbox by design; use the concrete
-self-contained provider for CLI runs.
-
-## Testing / smoke test
-
-Use these three commands as a layered smoke test of the CLI — an install check,
-a free structural test, and a real end-to-end case:
+Use collaborative mode when a human should inspect each completed phase:
 
 ```bash
-# 1. Environment prerequisites (also run at the end of the installer)
-osp doctor
-
-# 2. Structural test — import + provenance + artifact contract, no model cost
-osp review ./paper.pdf --output ./osp-review --prepare-only
-#    Expect: "Prepared isolated OSP run: …" then PASS/INFO lines per phase;
-#    locked-scope must be PASS. No provider is contacted.
-
-# 3. Real end-to-end case — full 7-phase review (requires a model provider)
-osp review ./paper.pdf --output ./osp-review \
-  --venue arxiv --mode autonomous --headless \
-  --model apex/gpt-5.6-sol --variant medium
-#    Expect: <output>/final_review.md, all phases "completed" in
-#    `osp status <run>` (or `osp resume <run>` if interrupted).
+osp review ./paper.pdf --output ./osp-review --mode collaborative
 ```
 
-Level 2 is the cheapest way to verify the pipeline wiring without spending
-tokens: it runs the same import, isolation, and validation code as a real run
-but never contacts a provider. Level 3 is the actual review; on Linux the
-model must be self-contained under `~/.config/opencode` (see "Provider and
-sandbox notes").
+When the run reaches `gate_waiting`, inspect it and release the gate from
+another terminal:
+
+```bash
+osp status <run-directory>
+osp approve <run-directory>
+```
+
+Autonomous mode does not wait for questions or approval gates.
+
+## Seven-Stage Workflow
+
+OSP always executes the following order:
+
+```text
+onboarding -> summary -> literature -> historian -> baseline_scout -> qa -> review
+```
+
+1. **Onboarding** identifies the domain, venue, review mode, criteria, and
+   review guidelines; it also records provider availability and creates Q&A
+   scaffolds.
+2. **Summary** extracts claims, methods, datasets, baselines, metrics, results,
+   limitations, and evidence anchors from the paper.
+3. **Literature** performs exactly three auditable rounds: sub-domain anchor,
+   method anchor, and temporal expansion. LKM is attempted first, with
+   arXiv/Semantic Scholar context and tightly gated Google Scholar fallback.
+4. **Historian** builds the field narrative and checks whether the novelty
+   framing matches the retrieved prior work.
+5. **Baseline Scout** searches for missing or outdated baselines and unfair
+   comparisons, including compute/token/call-budget mismatches.
+6. **Q&A** generates the configured number of evidence-focused question/answer
+   pairs for every onboarding criterion. Unknown claims remain unresolved or
+   not assessable.
+7. **Review** consolidates the evidence into the final report with criterion
+   scores, evidence anchors, limitations, and a controlled recommendation.
+
+Every raw artifact and the final review contains `## Method`, `## Output`, and
+`## Provenance`. The controller validates these sections and the expected
+structure before allowing the next phase.
+
+## Run Outputs
+
+Each invocation creates a directory like:
+
+```text
+osp-review/
+└── osp-<timestamp>-<random>/
+    ├── source/                       read-only imported paper
+    ├── .brain/                       phase artifacts and final review
+    ├── .osp-run/                     controller state and source manifest
+    ├── .opencode/                    installed OSP commands and personas
+    ├── .open-scholar-peer/mcp/       isolated MCP server and Python venv
+    └── opencode.json                 per-run permissions and MCP config
+```
+
+The final report is:
+
+```text
+<run-directory>/.brain/review/final_review.md
+```
+
+Intermediate artifacts are under `.brain/raw/`. `.osp-run/run.json` records
+phase status, model scope, input digest, and resume state. The original input
+is never edited.
+
+## State and recovery
+
+Run state is stored in `.osp-run/run.json`; OpenCode server/session metadata is in `.osp-run/session.json`; OSP artifacts remain in `.brain/`. Imported source is copied to `source/` and made read-only. Every successful or failed phase creates a Git checkpoint with OSP trailers.
+
+```bash
+osp status <run> --json
+osp validate <run> --json
+osp resume <run>
+osp checkpoint <run>
+osp approve <run>
+```
+
+Resume verifies the locked input digest and scope digest before starting. A collaborative gate is released by `osp approve <run>`; changing mode does not retroactively bypass an existing gate.
+
+## Protocol contract
+
+The controller cannot skip or reorder:
+
+```text
+onboarding -> summary -> literature -> historian -> baseline_scout -> qa -> review
+```
+
+Literature runs exactly three rounds. Q&A produces exactly `session.json.qa_pairs_per_criterion` pairs for each criterion. The validator checks artifact sections, round strategies, Q&A numbering, final review structure, score rows, recommendation vocabulary, and evidence anchors.
+
+## Troubleshooting
+
+- If `osp` resolves to an older program, inspect `command -v osp`, put the install bin directory first in `PATH`, or invoke the installed `dist/cli.js` directly.
+- If PDF preparation fails, install Poppler and verify `pdftotext -v`.
+- If MCP preparation fails, use Python 3.10+ with `ensurepip` and `venv`, or pass `PYTHON=/path/to/python` to the installer/runtime.
+- If a run fails, keep the workspace, inspect `osp status` and `.osp-run`, then use `osp resume` after addressing the reported cause.
+- Dedicated retrieval providers may be unavailable or rate-limited. OSP records that limitation as unresolved provenance; it must not be converted into invented evidence.

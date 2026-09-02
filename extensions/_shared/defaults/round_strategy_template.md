@@ -4,15 +4,16 @@
 
 - **Strategy:** `{{strategy_slug}}` (one of: `sub-domain-anchor`, `method-anchor`, `temporal-expansion`)
 - **Goal of this round:** {{strategy_goal}}
-- **Tools used (must use all available; LKM-first, Google Scholar as fallback):**
-  - `osp-mcp.search_bohrium_lkm` (primary broad-coverage source; ~3 s, fixed-price)
-  - `osp-mcp.search_bohrium_reasoning` (round 2 — reasoning chains)
-  - `osp-mcp.search_bohrium_paper` (round 3 — year-window filters)
-  - `osp-mcp.get_bohrium_paper_graph` (expand a top hit's graph)
+- **Tools used (LKM-first; Google Scholar fallback only):**
+  - `osp-mcp.search_bohrium_lkm`
+  - `osp-mcp.search_bohrium_reasoning` (round 2)
+  - `osp-mcp.search_bohrium_paper`
+  - `osp-mcp.get_bohrium_paper_graph` (top-hit expansion)
   - `osp-mcp.search_arxiv`
   - `osp-mcp.search_semantic_scholar`
-  - `osp-mcp.search_google_scholar` (FALLBACK only — when the LKM tools error out)
+  - `osp-mcp.search_google_scholar` (fallback only after LKM error)
   - native Web Search (where available)
+- **Billing:** LKM searches cost 0.05 CNY/call; do not auto-page.
 - **Query formulation rules for this round:**
   - Round 1 (sub-domain-anchor): use the paper's stated sub-domain and primary keywords; aim for the canonical 10–20 most-cited works in this area. LKM: `search_bohrium_lkm` with scopes `conclusion,abstract` (claims-level view of established prior art) + `search_bohrium_paper` for citation counts.
   - Round 2 (method-anchor): switch to the proposed method's name and key technical terms; find prior or concurrent work using the *same technique*. LKM: `search_bohrium_reasoning` with the method phrasing; `search_bohrium_lkm` on the method name; then `get_bohrium_paper_graph` on the top hit to expand its reasoning structure.

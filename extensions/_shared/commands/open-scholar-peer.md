@@ -14,7 +14,7 @@ Invoke the `osp-orchestrator` skill.
 
 ## Steps
 
-1. **Read `.brain/session.json`.** If missing, the user has not initialized OSP in this project. Tell them to run the installer (`bash install.sh`) or, if `.brain/` is just missing, `bash scripts/init_brain.sh`.
+1. **Read `.brain/session.json`.** If missing, the user has not initialized OSP in this project. Tell them to start an isolated run with `osp review <paper>`.
 
 2. **Print a status snapshot:**
    ```

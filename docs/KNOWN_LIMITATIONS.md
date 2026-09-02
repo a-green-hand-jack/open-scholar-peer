@@ -1,132 +1,31 @@
-# Known Limitations — Open ScholarPeer v2
+# Known Limitations
 
-These are limitations users should know about going in. None block normal operation, but each affects the quality or smoothness of specific phases. Workarounds are listed.
+These limitations apply to the supported TypeScript/OpenCode-native CLI.
 
----
+## Retrieval availability
 
-## 1. Some tools fall back to self-reflection for the Q&A engine
+The literature phase uses the bundled arXiv, Semantic Scholar, and Google Scholar providers. Anonymous Semantic Scholar access is rate-limited, and Google Scholar is best-effort HTML retrieval. Provider failures are preserved as unresolved provenance; the runtime never treats unavailable evidence as a citation.
 
-**What:** The Multi-Aspect Q&A Engine (`/5-osp-qa`) is designed around true subagent isolation: the Query Agent (main thread) delegates each question to a fresh Answer Generator subagent so the verification cannot be biased by the question's reasoning trace.
+## PDF conversion
 
-**Limitation:** Three of the supported tools — **Antigravity** (legacy desktop app), **Mistral Vibe**, and **OpenHands** — either do not support subagents or have only profile-style independence (no documented subagent delegation). On these, the Q&A engine falls back to **self-reflection mode**: both Query and Answer Generator personas run in the same context window, separated by strict turn markers (`=== Query Agent === ... === END === === Answer Generator === ...`).
+PDF preparation requires Poppler `pdftotext`. The imported PDF and extracted `paper.md` are kept inside the isolated run workspace. Scanned PDFs without an extractable text layer require a manually supplied readable source.
 
-**Impact:** Reviews on the Q&A axis from these tools are likely lower in independent-verification depth than reviews from Claude Code, Cursor, Gemini CLI, Antigravity CLI, Copilot CLI, Codex CLI, Qwen Code, OpenCode, Junie, Kiro, or Kimi Code. The other downstream phases (literature, historian, baseline scout, reviewer) are unaffected.
+## One paper per run
 
-**Workaround:** If you need full subagent isolation for a paper, use one of the subagent-capable tools listed above.
+Each isolated run reviews one paper. Start another `osp review` command for a second paper rather than sharing `.brain/` state.
 
----
+## Fixed literature depth
 
-## 2. Semantic Scholar anonymous rate limits are aggressive
+The protocol always executes three literature rounds: `sub-domain-anchor`, `method-anchor`, and `temporal-expansion`. This depth is intentionally fixed by the artifact contract.
 
-**What:** The `osp_mcp.search_semantic_scholar` and related tools use the official Semantic Scholar API. Without an API key, anonymous limits apply (~100 requests / 5 min, frequently bursty 429s).
+## Configurable Q&A cost
 
-**Impact:** During the 3-round literature retrieval (`/2-osp-literature`), an anonymous user may hit rate limits mid-round, causing partial corpora.
+`--qa-pairs <count>` controls the positive number of ordered Q&A pairs per criterion. Larger values increase model cost and runtime. Q&A output can still require controller remediation when a provider returns an incomplete structure.
 
-**Workaround:** Get a free API key at https://www.semanticscholar.org/product/api#api-key and export it before launching your AI tool:
+## Downstream invalidation
 
-```bash
-export SEMANTIC_SCHOLAR_API_KEY=sk-...
-```
+Re-running an earlier phase does not automatically invalidate later artifacts. Use `osp resume` and inspect `osp validate`; rerun downstream phases when an upstream artifact has changed.
 
-The MCP server reads the env var at startup. Add it to your shell profile to persist.
+## Provider sandbox constraints
 
----
-
-## 3. PDF parsing depends on the host tool's native Read or markitdown MCP
-
-**What:** OSP needs a readable text version of the paper at `.brain/input/paper.md` for the Summary Agent. The `markitdown` MCP server is registered by the installer for this purpose.
-
-**Limitation:** If `markitdown-mcp` is not installed (or `uvx` is not on PATH), and the paper is supplied as a PDF/DOCX, conversion will fail.
-
-**Impact:** `/0-osp-onboarding` will refuse to advance until either (a) markitdown is installed, or (b) the user manually provides `.brain/input/paper.md`. This is intentional fail-fast behavior to avoid silent downstream errors.
-
-**Workaround:** Install markitdown:
-```bash
-pipx install uv          # if not already installed
-uvx markitdown-mcp       # smoke-test that the package is fetchable
-```
-or convert manually:
-```bash
-markitdown paper.pdf > .brain/input/paper.md
-```
-
----
-
-## 4. Antigravity and Copilot CLI MCP configs require manual setup
-
-**What:** Most tools store MCP config in a project-local file the installer can write directly. Two exceptions:
-- **Antigravity** uses a global config at `~/.gemini/antigravity/mcp_config.json`.
-- **Copilot CLI** uses `~/.copilot/mcp-config.json`.
-
-**Limitation:** Programmatically modifying user-global config files would be intrusive. The installers print a paste-ready snippet (or attempt a careful merge in Copilot's case) but the user must verify the file.
-
-**Impact:** Slightly higher first-run friction on Antigravity. Copilot CLI is auto-merged by `merge_mcp_config.py` but the user should still verify the file looks right.
-
-**Workaround:** Check the snippet at `.open-scholar-peer/antigravity_mcp_snippet.json` (Antigravity) or `~/.copilot/mcp-config.json` (Copilot CLI) after install.
-
----
-
-## 5. Single paper per `.brain/` (multi-paper sessions deferred)
-
-**What:** v1 of OSP supports one active review per project directory.
-
-**Limitation:** To review a second paper in the same project, you must archive or delete the existing `.brain/` and start fresh.
-
-**Impact:** Researchers who maintain a directory of in-progress reviews must either use separate project directories or move `.brain/` aside between papers.
-
-**Future:** Multi-paper sessions (`.brain/sessions/<paper_slug>/` with active-session pointer) are planned but deferred.
-
-**Workaround:** Use one project directory per paper, or:
-```bash
-mv .brain .brain.archive-$(date +%F)
-```
-
----
-
-## 6. Google Scholar tools are best-effort (HTML scraping)
-
-**What:** Google Scholar has no public API. The `osp_mcp.search_google_scholar` tools scrape HTML.
-
-**Limitation:** Subject to Google's rate limits and HTML structure changes. Results may be empty or stale during heavy usage.
-
-**Impact:** Google Scholar is now the **fallback** broad-coverage source. The Literature Agent and Baseline Scout use Bohrium LKM as the primary broad-coverage source; Google Scholar is only consulted when the `bohr` CLI is unavailable or returns errors.
-
-**Workaround:** Install the Bohrium LKM CLI (`npm i -g @dptech-corp/bohr-cli && bohr auth login`) to keep the fast LKM path enabled.
-
----
-
-## 7. Bohrium LKM requires the `bohr` CLI and its own login
-
-**What:** The `osp_mcp.search_bohrium_*` and `get_bohrium_paper_graph` tools shell out to the official `bohr` CLI. They do not embed or read any credential — the CLI stores its own login from `bohr auth login`.
-
-**Limitation:** If `bohr` is missing from PATH, or the login is missing/expired, the LKM tools return `{"error": ...}` and OSP falls back to Google Scholar. Session state records this as `session.json.mcp.bohrium_available`.
-
-**Impact:** Users who skip the CLI install get the slower Google Scholar path; no silent breakage (fallback is explicit in the prompts).
-
-**Workaround:** `npm i -g @dptech-corp/bohr-cli` then `bohr auth login`. LKM calls are fixed-price (0.05 CNY each, covered first by the personal monthly 1,000-call quota, Asia/Shanghai calendar month); OSP never pages through results automatically.
-
----
-
-## 8. Hyperparameters are structurally enforced, not numerically configurable
-
-**What:** The paper specifies `k=3` literature rounds and `N_QA=10` probing pairs per criterion. OSP enforces `k=3` via file structure (3 separate round files). `N_QA` is **user-configurable** at the start of `/5-osp-qa` — the default is 2 pairs per criterion (lighter cost; the user can choose any N at runtime, and the template renders `### Q1`…`### QN` accordingly). The choice persists in `session.json.qa_pairs_per_criterion`.
-
-**Limitation:** You cannot easily run "k=5 rounds" or "5 Q&A pairs per criterion" without editing the canonical templates in `extensions/_shared/defaults/`.
-
-**Why this design:** Host tools (Claude Code, Cursor, etc.) do not expose temperature or other LLM hyperparameters to slash commands. Structural enforcement (file templates the agent must fill) is the only reliable way to ensure the count without the LLM hallucinating compliance.
-
-**Workaround:** If you need different counts for research purposes, fork the templates in `_shared/defaults/` and re-run the sync script.
-
----
-
-## 9. Re-running an earlier phase invalidates downstream artifacts
-
-**What:** OSP commands are idempotent (re-running overwrites their own artifact with a warning), but they do **not** automatically invalidate downstream artifacts.
-
-**Limitation:** If you re-run `/1-osp-summary` after the Q&A phase has already produced `05_qa_*.md` files, those Q&A files now reflect a stale structured summary.
-
-**Impact:** Reviews can become inconsistent across the artifact chain.
-
-**Workaround:** After re-running an earlier phase, manually re-run each subsequent phase, or run `/open-scholar-peer` and follow the dispatcher's guidance.
-
-**Future:** Cascading invalidation (e.g. re-running `/1-osp-summary` resets `phases.qa` to `pending`) is on the roadmap.
+OpenCode runs with the run-local permissions configured by OSP. Network retrieval is controlled by `--network-policy`; offline runs must report unavailable external evidence. Review agents must write scratch files only under `.brain/tmp/` and may not modify the imported `source/` directory.

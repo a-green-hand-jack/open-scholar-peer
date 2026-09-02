@@ -30,7 +30,7 @@ Every `.brain/raw/*.md` file (and `review/final_review.md`) has three required t
 |---|---|---|---|---|
 | 0 | `/0-osp-onboarding` | `osp-orchestrator` | `session.json` | `00_review_guidelines.md`, scaffolds empty `05_qa_<slug>.md`, updates `session.json` |
 | 1 | `/1-osp-summary` | `osp-summary-agent` | `session.json`, `.brain/input/paper.{pdf,md}` | `01_structured_summary.md` |
-| 2 | `/2-osp-literature` | `osp-literature-review-agent` | `session.json`, `01_structured_summary.md` | `02a_literature_round1.md`, `02b_literature_round2.md`, `02c_literature_round3.md`, then consolidated `02_retrieved_literature.md` |
+| 2 | `/2-osp-literature` | `osp-literature-review-agent` | `session.json`, `01_structured_summary.md`, optional `02_lkm_paper_extraction.md` | `02a_literature_round1.md`, `02b_literature_round2.md`, `02c_literature_round3.md`, then consolidated `02_retrieved_literature.md` |
 | 3 | `/3-osp-historian` | `osp-historian-agent` | `session.json`, `01_structured_summary.md`, `02_retrieved_literature.md` | `03_domain_narrative.md` |
 | 4 | `/4-osp-baseline-scout` | `osp-baseline-scout-agent` | `session.json`, `01_structured_summary.md`, `02_retrieved_literature.md` | `04_missing_baselines.md` |
 | 5 | `/5-osp-qa` | `osp-query-agent` (main) + `osp-answer-generator-agent` (subagent) | `session.json`, `01_structured_summary.md`, `03_domain_narrative.md`, `04_missing_baselines.md`, `00_review_guidelines.md` | `05_qa_<criterion_slug>.md` (one per active criterion) |
@@ -47,7 +47,7 @@ The literature step writes **three separate files** to make the 3-round expansio
 | `02b_literature_round2.md` | `method-anchor` | Search using the proposed method's name and technical terms. Goal: find prior work using similar techniques. |
 | `02c_literature_round3.md` | `temporal-expansion` | Search filtered to last 12 months + concurrent work + arXiv pre-prints + workshop papers. Goal: catch what static knowledge cutoffs miss. |
 
-Each round must use **all available retrieval tools with different query formulations** per round. Primary broad-coverage source is Bohrium LKM (`search_bohrium_lkm`, plus `search_bohrium_reasoning` for round 2 and `search_bohrium_paper` for round 3); supporting tools are arXiv and Semantic Scholar; Google Scholar (`search_google_scholar*`) is used **only as fallback when the LKM tools return an error** (the `mcp.bohrium_available` flag is advisory, not a gate). LKM calls are fixed-price (0.05 CNY each, personal monthly 1,000-call quota) — keep one bounded call per query, never page automatically. Queries used are listed in each round's `## Provenance`.
+Each round uses the Bohrium LKM tools first, together with arXiv and Semantic Scholar using different query formulations. Google Scholar is invoked only when an LKM tool returns `{"error": ...}`; native web search is optional context only. Queries, tool errors, LKM paper IDs, and fallback decisions are listed in each round's `## Provenance`.
 
 After all three rounds, the agent writes `02_retrieved_literature.md` consolidating retained papers (deduplicated), with one entry per paper: title, authors, year, venue, abstract, source(s) it appeared in.
 

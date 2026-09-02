@@ -16,16 +16,15 @@ Invoke the `osp-orchestrator` skill (no domain persona needed for this step).
 
 ### 1. Read session state
 
-- Read `.brain/session.json`. If missing, run `scripts/init_brain.sh` first or initialize a default per the v2 schema.
+- Read `.brain/session.json`. If missing, start a new isolated run with `osp review <paper>`.
 - If `phases.onboarding.status == "completed"` and `qa_criteria` is non-empty, ask the user whether to re-run (which would overwrite `00_review_guidelines.md` and any pre-scaffolded `05_qa_*.md` files). If they decline, exit.
 
 ### 1.5. Detect Bohrium LKM availability
 
-Bohrium LKM is the Literature phase's primary broad-coverage retrieval source; Google Scholar is the fallback. Record which one is available so downstream phases know what to expect.
-
-- Probe the environment (best-effort, if shell commands are possible): `command -v bohr`. If present, optionally confirm login with `bohr auth status` (expect `ok: true` / `logged_in: true`).
-- Set `session.json.mcp.bohrium_available = true` when the `bohr` CLI is installed and logged in; otherwise `false`. Never read, print, or log any credential — the CLI stores its own login.
-- The flag is **advisory, not a gate**: `/2-osp-literature` always attempts the LKM tools first and falls back to Google Scholar only when an LKM tool actually returns `{"error": ...}`. A false flag (e.g. headless runs where `command -v bohr` cannot run) never blocks the LKM attempt.
+Read the `session.json.mcp.bohrium_available` value recorded by the TypeScript
+controller during workspace preparation. This field is advisory only: the
+Literature phase must still attempt LKM and may fall back to Google Scholar only
+when an LKM tool returns `{"error": ...}`. Never print or persist credentials.
 
 ### 2. Locate the paper and ensure a readable text version
 

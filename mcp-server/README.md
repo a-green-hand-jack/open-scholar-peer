@@ -4,14 +4,11 @@ Single FastMCP server exposing academic-search tools across four providers.
 
 ## Tools
 
-### Bohrium LKM (primary broad-coverage source; requires the `bohr` CLI)
-- `search_bohrium_lkm(query, top_k=10, scopes="conclusion,abstract")` — claims + papers
-- `search_bohrium_reasoning(query, top_k=10)` — reasoning chains (same-technique hits)
-- `get_bohrium_paper_graph(paper_id, max_nodes=25, max_edges=40)` — paper knowledge graph
-- `search_bohrium_paper(query, size=10, year_from=None, year_to=None, jcr=None)` — paper records with year/JCR filters
-- `submit_bohrium_pdf(pdf_path)` — async knowledge extraction of a local PDF (free)
-- `check_bohrium_parse_task(task_id)` / `wait_bohrium_parse_task(task_id, interval_s=5, timeout_s=60)` — poll the parse task (free)
-- `get_bohrium_parse_result(task_id)` — fetched extraction; 1.00 CNY first time / 0.10 CNY on cache hit
+### Bohrium LKM (primary broad-coverage source; requires `bohr`)
+- `search_bohrium_lkm`, `search_bohrium_reasoning`, `search_bohrium_paper`, and `get_bohrium_paper_graph`
+- `submit_bohrium_pdf`, `check_bohrium_parse_task`, `wait_bohrium_parse_task`, and `get_bohrium_parse_result`
+
+LKM search calls cost 0.05 CNY each. The OSP agent uses LKM first and Google Scholar only after an LKM error. Install the official CLI with `npm i -g @dptech-corp/bohr-cli`, then authenticate with `bohr auth login`. OSP never handles or logs the CLI credentials.
 
 ### arXiv (no API key needed)
 - `search_arxiv(query, max_results=10)`
@@ -30,7 +27,7 @@ Single FastMCP server exposing academic-search tools across four providers.
 
 ## Setup
 
-The installer (`bash install.sh`) copies this server into `<your-project>/.open-scholar-peer/mcp/` and creates a Python virtualenv with all dependencies. You don't need to manage it manually.
+The TypeScript runtime copies this server into `<review-workspace>/.open-scholar-peer/mcp/` and creates an isolated Python virtualenv with all dependencies.
 
 For the Bohrium LKM tools you also need the official `bohr` CLI on PATH (the server shells out to it; it stores its own login, no API key is handled by OSP):
 
