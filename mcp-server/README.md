@@ -1,8 +1,14 @@
 # `osp_mcp` — Open ScholarPeer MCP Server
 
-Single FastMCP server exposing academic-search tools across three providers.
+Single FastMCP server exposing academic-search tools across four providers.
 
 ## Tools
+
+### Bohrium LKM (primary broad-coverage source; requires `bohr`)
+- `search_bohrium_lkm`, `search_bohrium_reasoning`, `search_bohrium_paper`, and `get_bohrium_paper_graph`
+- `submit_bohrium_pdf`, `check_bohrium_parse_task`, `wait_bohrium_parse_task`, and `get_bohrium_parse_result`
+
+LKM search calls cost 0.05 CNY each. The OSP agent uses LKM first and Google Scholar only after an LKM error. Install the official CLI with `npm i -g @dptech-corp/bohr-cli`, then authenticate with `bohr auth login`. OSP never handles or logs the CLI credentials.
 
 ### arXiv (no API key needed)
 - `search_arxiv(query, max_results=10)`

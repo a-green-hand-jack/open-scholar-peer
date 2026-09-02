@@ -21,7 +21,7 @@ function repoRoot(): string {
   return resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 }
 
-async function prepare(source: string, output: string, mode: "autonomous" | "collaborative", networkPolicy: "online" | "offline", model?: string, variant?: string): Promise<string> {
+async function prepare(source: string, output: string, mode: "autonomous" | "collaborative", networkPolicy: "online" | "offline", model?: string, variant?: string, allowLkmSpend = false): Promise<string> {
   const sourcePath = resolve(source);
   const parent = resolve(output);
   const token = randomBytes(3).toString("hex");
@@ -30,10 +30,19 @@ async function prepare(source: string, output: string, mode: "autonomous" | "col
   await mkdir(join(runDir, ".brain", "review"), { recursive: true });
   await mkdir(join(runDir, ".brain", "tmp"), { recursive: true });
   await cp(join(repoRoot(), ".brain-template", "session.json"), join(runDir, ".brain", "session.json"));
-  await installRuntimeAssets(runDir, networkPolicy, mode);
+  await installRuntimeAssets(runDir, networkPolicy, mode, true, allowLkmSpend);
+  const sessionPath = join(runDir, ".brain", "session.json");
+  const session = JSON.parse(await readFile(sessionPath, "utf8"));
+  try {
+    await execa("bohr", ["auth", "status"], { stdio: "ignore" });
+    session.mcp.bohrium_available = true;
+  } catch {
+    session.mcp.bohrium_available = false;
+  }
+  await writeJsonAtomic(sessionPath, session);
   await writeFile(join(runDir, "AGENTS.md"), "# Open ScholarPeer Review Workspace\n\nFollow `.opencode/AGENTS.md`. Execute only the controller-selected phase. Never modify `source/`.\n", "utf8");
   const imported = await importSource(sourcePath, runDir);
-  const scope = { workflow: [...PHASES], mode, network_policy: networkPolicy, model: model ?? null, variant: variant ?? null, input_digest: imported.digest, source_kind: imported.kind };
+  const scope = { workflow: [...PHASES], mode, network_policy: networkPolicy, allow_lkm_spend: allowLkmSpend, model: model ?? null, variant: variant ?? null, input_digest: imported.digest, source_kind: imported.kind };
   const state = RunStateSchema.parse({
     schema_version: "osp-run-v2", run_id: runDir.split("/").pop(), status: "prepared", mode,
     phases: initialPhases(), current_phase: null, scope,
@@ -67,10 +76,11 @@ program.command("review <source>")
   .option("--timeout <seconds>", "phase timeout", "1800")
   .option("--qa-pairs <count>", "ordered Q&A pairs per criterion", "2")
   .option("--network-policy <policy>", "online or offline", "online")
-  .action(async (source: string, options: { output: string; mode: "autonomous" | "collaborative"; headless?: boolean; prepareOnly?: boolean; model?: string; variant?: string; timeout: string; qaPairs: string; networkPolicy: "online" | "offline" }) => {
+  .option("--allow-lkm-spend", "authorize billable Bohrium LKM calls for this run")
+  .action(async (source: string, options: { output: string; mode: "autonomous" | "collaborative"; headless?: boolean; prepareOnly?: boolean; model?: string; variant?: string; timeout: string; qaPairs: string; networkPolicy: "online" | "offline"; allowLkmSpend?: boolean }) => {
     if (!["autonomous", "collaborative"].includes(options.mode)) throw new Error("--mode must be autonomous or collaborative");
     if (!["online", "offline"].includes(options.networkPolicy)) throw new Error("--network-policy must be online or offline");
-    const runDir = await prepare(source, options.output, options.mode, options.networkPolicy, options.model, options.variant);
+    const runDir = await prepare(source, options.output, options.mode, options.networkPolicy, options.model, options.variant, Boolean(options.allowLkmSpend));
     const sessionPath = join(runDir, ".brain", "session.json");
     const session = JSON.parse(await readFile(sessionPath, "utf8"));
     const qaPairs = Number(options.qaPairs);
@@ -124,6 +134,13 @@ program.command("approve <run>").action(async (run: string) => {
 program.command("doctor").action(async () => {
   console.log(`node: ${process.version}`);
   try { console.log(`opencode: ${(await execa("opencode", ["--version"])).stdout.trim()}`); } catch { console.log("opencode: not available"); }
+  try {
+    await execa("bohr", ["auth", "status"], { stdio: "ignore" });
+    console.log("bohr: available and authenticated (LKM enabled)");
+  } catch {
+    try { await execa("bohr", ["--version"], { stdio: "ignore" }); console.log("bohr: available but not authenticated (LKM fallback-only)"); }
+    catch { console.log("bohr: not available (LKM fallback-only)"); }
+  }
 });
 
 program.parseAsync().catch((error: unknown) => { console.error(`osp: ${error instanceof Error ? error.message : String(error)}`); process.exitCode = 2; });

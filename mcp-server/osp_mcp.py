@@ -30,6 +30,7 @@ from mcp.server.fastmcp import FastMCP
 from providers import arxiv as arxiv_provider
 from providers import semantic_scholar as ss_provider
 from providers import google_scholar as gs_provider
+from providers import bohrium as bohrium_provider
 
 try:
     from dotenv import load_dotenv
@@ -54,6 +55,52 @@ async def _run(fn, *args, **kwargs) -> Any:
         )
     except asyncio.TimeoutError:
         raise TimeoutError(f"{fn.__name__} timed out after {_TIMEOUT}s")
+
+async def _bohr(fn, *args) -> dict[str, Any]:
+    try:
+        return await _run(fn, *args)
+    except Exception as error:
+        return {"error": f"{fn.__name__} failed: {error}"}
+
+@mcp.tool()
+async def search_bohrium_lkm(query: str, top_k: int = 10, scopes: str = "claim,conclusion,abstract") -> dict[str, Any]:
+    """Search scientific claims and papers in Bohrium LKM."""
+    return await _bohr(bohrium_provider.search_lkm, query, top_k, scopes)
+
+@mcp.tool()
+async def search_bohrium_reasoning(query: str, top_k: int = 10) -> dict[str, Any]:
+    """Search LKM reasoning chains for a technique."""
+    return await _bohr(bohrium_provider.search_reasoning, query, top_k)
+
+@mcp.tool()
+async def search_bohrium_paper(query: str, size: int = 10, year_from: int | None = None, year_to: int | None = None, jcr: str | None = None) -> dict[str, Any]:
+    """Search structured LKM paper records."""
+    return await _bohr(bohrium_provider.search_papers, query, size, year_from, year_to, jcr)
+
+@mcp.tool()
+async def get_bohrium_paper_graph(paper_id: str, max_nodes: int = 25, max_edges: int = 40) -> dict[str, Any]:
+    """Get a bounded LKM paper knowledge graph."""
+    return await _bohr(bohrium_provider.get_paper_graph, paper_id, max_nodes, max_edges)
+
+@mcp.tool()
+async def submit_bohrium_pdf(pdf_path: str) -> dict[str, Any]:
+    """Submit a PDF for optional LKM query-seeding extraction."""
+    return await _bohr(bohrium_provider.parse_submit, pdf_path)
+
+@mcp.tool()
+async def check_bohrium_parse_task(task_id: str) -> dict[str, Any]:
+    """Check an LKM PDF parse task."""
+    return await _bohr(bohrium_provider.parse_status, task_id)
+
+@mcp.tool()
+async def wait_bohrium_parse_task(task_id: str, interval_s: int = 5, timeout_s: int = 60) -> dict[str, Any]:
+    """Wait for an LKM PDF parse task."""
+    return await _bohr(bohrium_provider.parse_wait, task_id, interval_s, timeout_s)
+
+@mcp.tool()
+async def get_bohrium_parse_result(task_id: str) -> dict[str, Any]:
+    """Fetch a completed LKM PDF parse result."""
+    return await _bohr(bohrium_provider.parse_result, task_id)
 
 
 # ---------- arXiv ----------------------------------------------------------

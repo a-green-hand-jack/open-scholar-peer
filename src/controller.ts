@@ -91,7 +91,7 @@ For onboarding, write .brain/raw/00_review_guidelines.md, create exactly one .br
 
 Follow the installed command below:
 
-${command}`;
+    ${command}${phase === "literature" ? "\n\nLKM behavior: use the round's primary osp_search_bohrium_* tool first, then osp_get_bohrium_paper_graph on a returned top hit where required. Google Scholar is fallback only when the round's primary LKM search returns an error and no primary LKM search returned usable data; graph or PDF-extraction errors do not authorize fallback. Record actual tools and source IDs in Provenance. Optional PDF extraction is best-effort and must not block the three rounds." : ""}${phase === "review" ? "\n\nController validation is strict: the final file must contain exact level-two headings `## Summary`, `## Strengths`, `## Weaknesses`, `## Dimension Scores`, `## Assessment`, `## Recommendation`, and `## What was not checked`. Use exactly `## Recommendation`, not `Readiness Recommendation` or another alias. Under `## Dimension Scores`, use the exact five columns `Dimension | Score | What this band means here | Why this score | Evidence` and write exactly one row for every `session.json.qa_criteria` item. Each row must use the exact criterion label, a score such as `3/5` or `insufficient evidence to judge`, and a concrete artifact anchor in Evidence." : ""}`;
     try {
       const invocations = phase === "literature" ? 3 : 1;
       for (let round = 1; round <= invocations; round += 1) {

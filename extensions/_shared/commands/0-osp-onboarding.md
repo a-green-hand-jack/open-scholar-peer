@@ -19,6 +19,13 @@ Invoke the `osp-orchestrator` skill (no domain persona needed for this step).
 - Read `.brain/session.json`. If missing, start a new isolated run with `osp review <paper>`.
 - If `phases.onboarding.status == "completed"` and `qa_criteria` is non-empty, ask the user whether to re-run (which would overwrite `00_review_guidelines.md` and any pre-scaffolded `05_qa_*.md` files). If they decline, exit.
 
+### 1.5. Detect Bohrium LKM availability
+
+Read the `session.json.mcp.bohrium_available` value recorded by the TypeScript
+controller during workspace preparation. This field is advisory only: the
+Literature phase must still attempt LKM and may fall back to Google Scholar only
+when an LKM tool returns `{"error": ...}`. Never print or persist credentials.
+
 ### 2. Locate the paper and ensure a readable text version
 
 - Check `.brain/input/` for a paper file. Common extensions: `.pdf`, `.md`, `.tex`, `.docx`.

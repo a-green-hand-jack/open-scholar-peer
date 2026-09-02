@@ -11,6 +11,17 @@ describe("OpenCode interaction policy", () => {
       await installRuntimeAssets(directory, "online", "autonomous", false);
       const config = JSON.parse(await readFile(join(directory, "opencode.json"), "utf8"));
       expect(config.permission.question).toBe("deny");
+      expect(config.permission["osp_*"]).toBe("allow");
+      expect(config.agent["osp-runner"].permission["osp_*"]).toBe("allow");
+    } finally { await rm(directory, { recursive: true, force: true }); }
+  });
+
+  it("disables network MCP in offline mode", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "osp-config-offline-"));
+    try {
+      await installRuntimeAssets(directory, "offline", "autonomous", false);
+      const config = JSON.parse(await readFile(join(directory, "opencode.json"), "utf8"));
+      expect(config.mcp).toEqual({});
     } finally { await rm(directory, { recursive: true, force: true }); }
   });
 });

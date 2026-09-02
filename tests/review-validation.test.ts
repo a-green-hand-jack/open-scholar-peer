@@ -21,7 +21,7 @@ describe("final review contract", () => {
     try {
       await mkdir(join(directory, ".brain", "review"), { recursive: true });
       await writeFile(join(directory, ".brain", "session.json"), JSON.stringify({ qa_criteria: [{ slug: "novelty" }], phases: { review: { status: "completed", completed_at: "now", notes: "ok" } } }));
-      await writeFile(join(directory, ".brain", "review", "final_review.md"), "## Method\nx\n## Output\n### Summary\nx\n### Strengths\nx\n### Weaknesses\nx\n### Dimension Scores\n| Criterion | Score (1–5) | Assessment |\n|---|---:|---|\n| Novelty | 3/5 | adequate |\n### Decision Recommendation\nReject\n### Confidence\nx\n## Provenance\n01_structured_summary.md\n");
+      await writeFile(join(directory, ".brain", "review", "final_review.md"), "## Method\nx\n## Output\nx\n## Summary\nx\n## Strengths\nx\n## Weaknesses\nx\n## Dimension Scores\n| Dimension | Score | What this band means here | Why this score | Evidence |\n|---|---:|---|---|---|\n| Novelty | 3/5 | adequate | grounded | 05_qa_novelty.md |\n## Assessment\nx\n## Recommendation\nreject\n## What was not checked\nx\n## Provenance\n01_structured_summary.md\n");
       const checks = await validatePhase(directory, "review");
       expect(checks.every((check) => check.passed)).toBe(true);
     } finally { await rm(directory, { recursive: true, force: true }); }
@@ -32,10 +32,10 @@ describe("final review contract", () => {
     try {
       await mkdir(join(directory, ".brain", "review"), { recursive: true });
       await writeFile(join(directory, ".brain", "session.json"), JSON.stringify({ qa_criteria: [{ slug: "novelty", label: "Novelty & Originality" }], phases: { review: { status: "completed", completed_at: "now", notes: "ok" } } }));
-      const common = "## Method\nx\n## Output\n### Summary\nx\n### Strengths\nx\n### Weaknesses\nx\n### Dimension Scores\n| Criterion | Score | Assessment |\n|---|---|---|\n";
-      await writeFile(join(directory, ".brain", "review", "final_review.md"), `${common}| Novelty & Originality | insufficient evidence to judge | unresolved |\n### Decision Recommendation\nneeds revision\n### Confidence\nx\n## Provenance\n01_structured_summary.md\n`);
+      const common = "## Method\nx\n## Output\nx\n## Summary\nx\n## Strengths\nx\n## Weaknesses\nx\n## Dimension Scores\n| Dimension | Score | What this band means here | Why this score | Evidence |\n|---|---|---|---|---|\n";
+      await writeFile(join(directory, ".brain", "review", "final_review.md"), `${common}| Novelty & Originality | insufficient evidence to judge | unresolved band | unresolved | 05_qa_novelty.md |\n## Assessment\nx\n## Recommendation\nneeds revision\n## What was not checked\nx\n## Provenance\n01_structured_summary.md\n`);
       expect((await validatePhase(directory, "review")).find((check) => check.name === "review:score-rows")?.passed).toBe(true);
-      await writeFile(join(directory, ".brain", "review", "final_review.md"), `${common}| Other Criterion | 3/5 | unsupported |\n### Decision Recommendation\nneeds revision\n### Confidence\nx\n## Provenance\n01_structured_summary.md\n`);
+      await writeFile(join(directory, ".brain", "review", "final_review.md"), `${common}| Other Criterion | 3/5 | adequate | unsupported | 05_qa_other.md |\n## Assessment\nx\n## Recommendation\nneeds revision\n## What was not checked\nx\n## Provenance\n01_structured_summary.md\n`);
       expect((await validatePhase(directory, "review")).find((check) => check.name === "review:score-rows")?.passed).toBe(false);
     } finally { await rm(directory, { recursive: true, force: true }); }
   });
@@ -45,7 +45,7 @@ describe("final review contract", () => {
     try {
       await mkdir(join(directory, ".brain", "review"), { recursive: true });
       await writeFile(join(directory, ".brain", "session.json"), JSON.stringify({ qa_criteria: [{ slug: "novelty", label: "Novelty" }], phases: { review: { status: "completed", completed_at: "now", notes: "ok" } } }));
-      const review = (recommendation: string) => `## Method\nx\n## Output\n### Summary\nx\n### Strengths\nx\n### Weaknesses\nx\n### Dimension Scores\n| Dimension | Score | Assessment |\n|---|---|---|\n| Novelty | 2/5 | weak |\n### Decision Recommendation\n${recommendation}\n### Confidence\nx\n## Provenance\n01_structured_summary.md\n`;
+      const review = (recommendation: string) => `## Method\nx\n## Output\nx\n## Summary\nx\n## Strengths\nx\n## Weaknesses\nx\n## Dimension Scores\n| Dimension | Score | What this band means here | Why this score | Evidence |\n|---|---|---|---|---|\n| Novelty | 2/5 | weak | unsupported | 05_qa_novelty.md |\n## Assessment\nx\n## Recommendation\n${recommendation}\n## What was not checked\nx\n## Provenance\n01_structured_summary.md\n`;
       await writeFile(join(directory, ".brain", "review", "final_review.md"), review("needs revision"));
       expect((await validatePhase(directory, "review")).find((check) => check.name === "review:recommendation")?.passed).toBe(false);
       await writeFile(join(directory, ".brain", "review", "final_review.md"), review("needs revision, conditional on additional evidence"));

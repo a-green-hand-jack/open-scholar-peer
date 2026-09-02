@@ -19,7 +19,7 @@ Tell the user which round is about to run, what its goal is, and what tools will
 ── Literature Review — Round N/3 ────────────────────────
 Strategy: <sub-domain anchor | method anchor | temporal expansion>
 Goal:     <one sentence — what this round is trying to find>
-Tools:    arxiv  +  semantic_scholar  +  google_scholar  +  web search (if available)
+Tools:    Bohrium LKM  +  arxiv  +  semantic_scholar  +  Google Scholar fallback
 Writes:   .brain/raw/02N_literature_round<N>.md
 Effort:   ~8-12 tool calls, ~1-3 min
 ─────────────────────────────────────────────────────────
@@ -46,14 +46,18 @@ After all three rounds, write `02_retrieved_literature.md` consolidating retaine
 
 ## Tools
 
-In **every round** you MUST dispatch **all available retrieval tools simultaneously** — not sequentially:
+In each round, dispatch that round's primary LKM search together with arXiv and Semantic Scholar. After results return, expand a top LKM paper graph where the round calls for it:
 
+- `osp-mcp.search_bohrium_lkm` — claims, conclusions, and abstracts
+- `osp-mcp.search_bohrium_reasoning` — method reasoning chains
+- `osp-mcp.search_bohrium_paper` — structured metadata and year filters
+- `osp-mcp.get_bohrium_paper_graph` — bounded top-hit expansion
 - `osp-mcp.search_arxiv` — pre-prints
 - `osp-mcp.search_semantic_scholar` — citation graph, well-indexed publications
-- `osp-mcp.search_google_scholar` — broader coverage: blogs, theses, workshop papers
-- Native `Web Search` (when your host tool provides one) — non-academic mentions, news, blog summaries
+- `osp-mcp.search_google_scholar` — fallback only after an LKM error
+- Native `Web Search` (when available) — only for non-academic context
 
-**Simultaneously** means: fire all tools in the same dispatch batch, not one after the other. Each tool gets a query formulation tailored to its index — the arxiv query stresses category + keywords, the semantic_scholar query stresses citations + field-of-study, the web search query adds the venue name for recency. Do not wait for one result before starting the next.
+LKM availability is advisory, not a gate. Never claim LKM is unavailable without attempting a call. Use Google Scholar only when the round's primary LKM search returns an error and no primary LKM search returned usable data. Graph and PDF-extraction errors do not authorize fallback. Record actual tools, queries, paper IDs, errors, and fallback decisions in Provenance.
 
 Relying on only one source biases the corpus. A paper that ranks low in one index may be the top result in another.
 

@@ -22,6 +22,7 @@ The `.brain/` directory at the project root is the persistent state store for an
 │   ├── 02a_literature_round1.md       Sub-domain anchor search
 │   ├── 02b_literature_round2.md       Method anchor search
 │   ├── 02c_literature_round3.md       Temporal/expansion search
+│   ├── 02_lkm_paper_extraction.md      Optional LKM query-seeding extraction
 │   ├── 02_retrieved_literature.md     Consolidated corpus from rounds a/b/c
 │   ├── 03_domain_narrative.md         Historian Agent output (chronological narrative)
 │   ├── 04_missing_baselines.md        Baseline Scout Agent output (adversarial findings)

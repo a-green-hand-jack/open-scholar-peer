@@ -53,26 +53,26 @@ export async function validatePhase(workspace: string, phase: Phase): Promise<Ch
   }
   if (phase === "review" && await exists(join(workspace, FIXED_OUTPUTS.review[0]))) {
     const review = await readFile(join(workspace, FIXED_OUTPUTS.review[0]), "utf8");
-    const required = ["Summary", "Strengths", "Weaknesses", "Dimension Scores"];
+    const required = ["Summary", "Strengths", "Weaknesses", "Dimension Scores", "Assessment"];
     for (const section of required) {
-      const present = new RegExp(`^#{2,3} ${section}\\s*$`, "im").test(review);
+      const present = new RegExp(`^## ${section}\\s*$`, "m").test(review);
       checks.push({ name: `review:## ${section}`, passed: present, detail: present ? "present" : "missing" });
     }
-    const recommendationHeading = /^#{2,3} (?:Decision )?Recommendation\s*$/im;
-    const notCheckedHeading = /^#{2,3} (?:What was not checked|Confidence)\s*$/im;
+    const recommendationHeading = /^## Recommendation\s*$/m;
+    const notCheckedHeading = /^## What was not checked\s*$/m;
     checks.push({ name: "review:recommendation-heading", passed: recommendationHeading.test(review), detail: "recommendation heading" });
     checks.push({ name: "review:not-checked", passed: notCheckedHeading.test(review), detail: "confidence or what-was-not-checked section" });
     const criteria = (session.qa_criteria ?? []).filter((criterion): criterion is { slug: string; label?: string } => Boolean(criterion.slug));
     const scoreSection = review.split(/^#{2,3} Dimension Scores[ \t]*$/im)[1]?.split(/^#{2,3} /m)[0] ?? "";
-    const scoreRows = [...scoreSection.matchAll(/^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|[^\n]*$/gm)].filter((match) => !/^[-: ]+$/.test(match[1]) && !/^[-: ]+$/.test(match[2]) && !/^(?:criterion|dimension)$/i.test(match[1].trim()));
+    const scoreRows = scoreSection.split("\n").filter((line) => line.trim().startsWith("|")).map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim())).filter((cells) => cells.length >= 5 && !/^[-: ]+$/.test(cells[0]) && !/^(?:criterion|dimension)$/i.test(cells[0]));
     const expectedLabels = new Set(criteria.map((criterion) => (criterion.label ?? criterion.slug).trim().toLowerCase()));
-    const actualLabels = new Set(scoreRows.map((match) => match[1].trim().toLowerCase()));
+    const actualLabels = new Set(scoreRows.map((cells) => cells[0].toLowerCase()));
     const validScore = (value: string) => /^(?:[0-5]\s*\/\s*5|insufficient evidence to judge)$/i.test(value.trim());
-    checks.push({ name: "review:score-rows", passed: scoreRows.length === criteria.length && actualLabels.size === criteria.length && [...actualLabels].every((label) => expectedLabels.has(label)) && scoreRows.every((match) => validScore(match[2])), detail: `${scoreRows.length} rows for ${criteria.length} criteria with expected labels and scores` });
+    checks.push({ name: "review:score-rows", passed: scoreRows.length === criteria.length && actualLabels.size === criteria.length && [...actualLabels].every((label) => expectedLabels.has(label)) && scoreRows.every((cells) => validScore(cells[1]) && cells.slice(2, 5).every(Boolean) && /(?:\.md|paper §|paper section)/i.test(cells[4])), detail: `${scoreRows.length} five-column evidenced rows for ${criteria.length} criteria` });
     const recommendationBody = review.split(/^#{2,3} (?:Decision )?Recommendation[ \t]*$/im)[1]?.split(/^#{2,3} /m)[0] ?? "";
-    const recommendation = recommendationBody.split("\n").map((line) => line.replace(/^\s*[*-]\s*/, "").trim()).find(Boolean) ?? "";
+    const recommendation = recommendationBody.split("\n").map((line) => line.trim().replace(/^\*\*(.*)\*\*$/, "$1").replace(/^[-*]\s+/, "").trim()).find(Boolean) ?? "";
     const allowed = /^(?:weak accept|weak reject|ready with minor revisions|needs major revision|accept|borderline|reject|ready|needs revision|not ready|not enough evidence)(?:\s*,?\s+conditional on\s+.+)?$/i;
-    const lowScore = scoreRows.some((match) => /^(?:[0-2])\s*\/\s*5$/i.test(match[2].trim()));
+    const lowScore = scoreRows.some((cells) => /^(?:[0-2])\s*\/\s*5$/i.test(cells[1]));
     const conditional = /\bconditional on\b/i.test(recommendation);
     checks.push({ name: "review:recommendation", passed: allowed.test(recommendation) && (!lowScore || conditional), detail: lowScore ? "controlled label and conditional on clause required for scores 0-2" : "controlled recommendation vocabulary" });
     checks.push({ name: "review:evidence-anchor", passed: /(?:\.brain\/raw\/01_structured_summary\.md|01_structured_summary\.md)/.test(review), detail: "summary artifact anchor" });

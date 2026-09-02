@@ -1,7 +1,7 @@
 ---
 description: "OSP Phase 2: External retrieval — one round per invocation (sub-domain, method, temporal)"
 reads: [".brain/session.json", ".brain/raw/01_structured_summary.md"]
-writes: [".brain/raw/02a_literature_round1.md", ".brain/raw/02b_literature_round2.md", ".brain/raw/02c_literature_round3.md", ".brain/raw/02_retrieved_literature.md", ".brain/session.json"]
+writes: [".brain/raw/02a_literature_round1.md", ".brain/raw/02b_literature_round2.md", ".brain/raw/02c_literature_round3.md", ".brain/raw/02_retrieved_literature.md", ".brain/raw/02_lkm_paper_extraction.md", ".brain/session.json"]
 ---
 
 # /2-osp-literature — Literature Review & Expansion
@@ -20,15 +20,15 @@ Invoke the `osp-literature-review-agent` skill.
 
 ## Resource notice
 
-⚠️ Each invocation makes ~8-12 API calls across 3 databases (arXiv, Semantic Scholar, Google Scholar). Expect 1-3 minutes per round.
+⚠️ LKM is the primary broad-coverage source (~3s/call, 0.05 CNY/search call). Optional PDF parse-result retrieval costs 1.00 CNY initially or 0.10 CNY on a cache hit. These calls require the explicit CLI flag `--allow-lkm-spend`; Google Scholar is fallback only after a primary LKM search error. Expect 1-3 minutes per round.
 
 ## Round definitions
 
-| # | Anchor | Goal |
-|---|--------|------|
-| 1 | `sub-domain-anchor` | Search using the paper's stated sub-domain and primary keywords |
-| 2 | `method-anchor` | Search using the method's name and key technical terms |
-| 3 | `temporal-expansion` | Filter to last 12 months; include arXiv pre-prints, concurrent submissions |
+| # | Anchor | Goal | Primary LKM tools |
+|---|--------|------|-------------------|
+| 1 | `sub-domain-anchor` | Search using the paper's stated sub-domain and primary keywords | `search_bohrium_lkm` + `search_bohrium_paper` |
+| 2 | `method-anchor` | Search using the method's name and key technical terms | `search_bohrium_reasoning` + `get_bohrium_paper_graph` |
+| 3 | `temporal-expansion` | Filter to last 12 months; include arXiv pre-prints, concurrent submissions | `search_bohrium_paper` + `search_arxiv` |
 
 ## Steps
 
@@ -39,10 +39,11 @@ Invoke the `osp-literature-review-agent` skill.
 
 2. Read `.brain/raw/01_structured_summary.md`.
 
+2.5. For the first invocation on a PDF, optionally use the Bohrium PDF parse tools to write `02_lkm_paper_extraction.md`. This is best-effort and must never block the three rounds.
+
 3. Run the **next pending round only**:
    - Activate the `osp-literature-review-agent` skill for that round.
-   - The skill searches using **all available retrieval tools** (`search_arxiv`, `search_semantic_scholar`,
-     `search_google_scholar`, native Web Search) with **different query formulations**.
+    - The skill searches using LKM first (`search_bohrium_lkm`, `search_bohrium_reasoning`, `search_bohrium_paper`, `get_bohrium_paper_graph`), plus arXiv and Semantic Scholar. Use Google Scholar only when an LKM call returns `{"error": ...}`.
    - Write the round file (`02a`, `02b`, or `02c`) using the template at `defaults/round_strategy_template.md`.
 
 4. Update `session.json`:
