@@ -78,9 +78,10 @@ silently accepting an output written by an incompatible OSP release.
 
 ## Acceptance run
 
-Run the six canonical benchmark task names under one pinned exam revision with
-Harbor's scholarly network preset and preserve `/workspace/material-manifest.json`
-as an artifact. Every trial must finish with a substantive
-`/workspace/submission/review.md`, and the OSP trail must contain matching
-contract versions and a source manifest. The Harbor reward proves the
-submission contract only; it is not a review-quality score.
+For a release smoke test, run one representative benchmark task under a pinned
+exam revision with Harbor's scholarly network preset and preserve
+`/workspace/material-manifest.json` as an artifact. The trial must finish with
+a substantive `/workspace/submission/review.md`, and the OSP trail must contain
+matching contract versions and a source manifest. The Harbor reward proves the
+submission contract only; it is not a review-quality score. A full benchmark
+campaign may run the canonical task set separately.
