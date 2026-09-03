@@ -8,10 +8,14 @@ TEMP_DIR=""
 cleanup() { [[ -z "$TEMP_DIR" ]] || rm -rf "$TEMP_DIR"; }
 trap cleanup EXIT
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-}"
+SCRIPT_DIR=""
+if [[ -n "$SCRIPT_SOURCE" && -f "$SCRIPT_SOURCE" ]]; then
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+fi
 if [[ -n "${OSP_SOURCE_DIR:-}" ]]; then
   SOURCE_DIR="$(cd "$OSP_SOURCE_DIR" && pwd)"
-elif [[ -f "${BASH_SOURCE[0]:-}" && -f "$SCRIPT_DIR/package.json" ]]; then
+elif [[ -n "$SCRIPT_DIR" && -f "$SCRIPT_DIR/package.json" ]]; then
   SOURCE_DIR="$SCRIPT_DIR"
 else
   TEMP_DIR="$(mktemp -d)"
