@@ -128,6 +128,7 @@ Follow the installed command below:
         await waitForIdle(this.runtime!, this.options.workspace, this.sessionId!, this.options.timeoutMs, signal);
         await this.recordRetrieval(phase);
       }
+      let completedSession = await this.readCompletedSession(session, phase);
       let checks = await validatePhase(this.options.workspace, phase, phase === "review" ? recommendation : undefined);
       let failed = checks.filter((check) => !check.passed);
       if (failed.length > 0) {
@@ -135,14 +136,14 @@ Follow the installed command below:
         await prompt(this.runtime!, this.options.workspace, this.sessionId!, `The ${phase} phase output failed controller validation: ${details}. Remediate only this phase now. ${phase === "review" ? `For the recommendation check, the first non-empty line under \`## Recommendation\` must be ${recommendationFormat(recommendation)} and the justification must include \`${recommendation.rationale}\`. If any score is 0-2/5, write it on that same line exactly as \`**<controlled label>, conditional on <concrete required changes>**\`; do not add a \`Controlled label:\` prefix, invent a label, or put the condition in a later paragraph. ` : ""}Write the missing or invalid artifacts and update .brain/session.json; do not advance to another phase.`, this.options.model, this.options.variant);
         await waitForIdle(this.runtime!, this.options.workspace, this.sessionId!, this.options.timeoutMs, signal);
         await this.recordRetrieval(phase);
+        completedSession = await this.readCompletedSession(session, phase);
         checks = await validatePhase(this.options.workspace, phase, phase === "review" ? recommendation : undefined);
         failed = checks.filter((check) => !check.passed);
       }
       if (failed.length > 0) throw new Error(`${phase} failed validation: ${failed.map((check) => `${check.name}: ${check.detail}`).join("; ")}`);
-      await verifyPhaseWrites(this.options.workspace, phase, brainBefore, workspaceBefore, await readJson(join(this.options.workspace, ".brain", "session.json")));
+      await verifyPhaseWrites(this.options.workspace, phase, brainBefore, workspaceBefore, completedSession);
       const current = await this.state();
       if (phase === "onboarding") {
-        const completedSession = await readJson(join(this.options.workspace, ".brain", "session.json"));
         const completedGuidelines = await readFile(join(this.options.workspace, ".brain", "raw", "00_review_guidelines.md"), "utf8").catch(() => undefined);
         const completedRecommendation = recommendationContract(completedSession, completedGuidelines);
         if (!completedRecommendation.valid) throw new Error("onboarding did not produce a valid recommendation contract");
@@ -187,6 +188,25 @@ Follow the installed command below:
   private async recordRetrieval(phase: Phase): Promise<void> {
     if (!this.runtime || !this.sessionId) return;
     await recordRetrievalEvents(this.options.workspace, phase, await sessionMessages(this.runtime, this.options.workspace, this.sessionId));
+  }
+
+  private async readCompletedSession(previous: any, phase: Phase): Promise<any> {
+    const path = join(this.options.workspace, ".brain", "session.json");
+    try {
+      return await readJson(path);
+    } catch (error) {
+      if (phase === "onboarding") throw error;
+      const recovered = structuredClone(previous) as Record<string, any>;
+      const phases = (recovered.phases ??= {});
+      phases[phase] = {
+        ...(phases[phase] ?? {}),
+        status: "completed",
+        completed_at: now(),
+        notes: "controller restored malformed phase metadata after artifact generation",
+      };
+      await writeJsonAtomic(path, recovered);
+      return recovered;
+    }
   }
 
   private async state(): Promise<any> { return readJson(join(this.options.workspace, ".osp-run", "run.json")); }
