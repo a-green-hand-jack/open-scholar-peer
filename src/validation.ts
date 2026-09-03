@@ -1,10 +1,11 @@
 import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { FIXED_OUTPUTS, LITERATURE_STRATEGIES, PHASES, type Phase } from "./phases.js";
+import { expectedOutputs, FIXED_OUTPUTS, LITERATURE_STRATEGIES, PHASES, type Phase } from "./phases.js";
 import { readJson } from "./fs.js";
 import { recommendationContract, recommendationFormat } from "./recommendation.js";
 import type { RecommendationContract } from "./recommendation.js";
 import { RunStateSchema } from "./state.js";
+import { CONTRACTS, contractsMatch } from "./provenance.js";
 
 export type Check = { name: string; passed: boolean; detail: string };
 
@@ -15,9 +16,7 @@ async function exists(path: string): Promise<boolean> {
 export async function validatePhase(workspace: string, phase: Phase, expectedRecommendation?: RecommendationContract): Promise<Check[]> {
   const checks: Check[] = [];
   const session = await readJson(join(workspace, ".brain", "session.json")) as { qa_criteria?: Array<{ slug?: string }>; qa_pairs_per_criterion?: number; phases?: Record<string, { status?: string; completed_at?: string; notes?: string }> };
-  const outputs = phase === "qa"
-    ? (session.qa_criteria ?? []).map((criterion) => `.brain/raw/05_qa_${criterion.slug}.md`)
-    : [...FIXED_OUTPUTS[phase]];
+  const outputs = expectedOutputs(session, phase);
   if (phase === "qa" && outputs.length === 0) checks.push({ name: "qa-criteria", passed: false, detail: "qa_criteria is empty" });
   for (const relative of outputs) {
     const path = join(workspace, relative);
@@ -98,6 +97,12 @@ export async function validatePhase(workspace: string, phase: Phase, expectedRec
 export async function validateRun(workspace: string): Promise<Check[]> {
   const checks: Check[] = [];
   const state = RunStateSchema.parse(await readJson(join(workspace, ".osp-run", "run.json")));
+  const actualContracts = (state.provenance as { contracts?: unknown } | undefined)?.contracts;
+  const contractsValid = contractsMatch(actualContracts);
+  checks.push({
+    name: "run:contract-versions", passed: contractsValid,
+    detail: contractsValid ? `matches ${JSON.stringify(CONTRACTS)}` : `incompatible or missing contract versions: ${JSON.stringify(actualContracts ?? null)}`,
+  });
   for (const phase of PHASES) {
     const expectedRecommendation = phase === "review" && state.review_contract
       ? { ...state.review_contract, valid: true }

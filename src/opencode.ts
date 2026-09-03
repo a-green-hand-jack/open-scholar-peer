@@ -63,3 +63,8 @@ export function attachTui(runtime: OpenCodeRuntime, directory: string, sessionId
 export async function abortSession(runtime: OpenCodeRuntime, directory: string, sessionId: string): Promise<void> {
   try { await unwrap(runtime.client.session.abort({ directory, sessionID: sessionId }), "session.abort"); } catch { /* best effort during cleanup */ }
 }
+
+export async function sessionMessages(runtime: OpenCodeRuntime, directory: string, sessionId: string): Promise<unknown> {
+  try { return await unwrap(runtime.client.session.messages({ sessionID: sessionId, directory }), "session.messages"); }
+  catch { return []; }
+}

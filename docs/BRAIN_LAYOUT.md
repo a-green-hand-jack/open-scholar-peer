@@ -7,6 +7,9 @@ The `.brain/` directory at the project root is the persistent state store for an
 > instead creates the same `.brain/` tree **inside each isolated run directory**
 > (`<output>/osp-<timestamp>-<digest>-<rand>/.brain/`) and never writes a
 > `.brain/` anywhere else. See `OSP_CLI.md` → "Run directory layout".
+> If the input is a Harbor task, the CLI also recognizes the task's adjacent
+> `/workspace/material-manifest.json`, but imports it into the run-local,
+> read-only `source/` tree rather than trusting an external path.
 
 ## Tree
 
@@ -50,3 +53,11 @@ The `.brain/` directory at the project root is the persistent state store for an
 - Tool-specific configs (`.mcp.json`, `.claude/`, `.cursor/`, etc.) — those live at project root.
 - The MCP server itself — that lives in `.open-scholar-peer/mcp/` (also gitignored).
 - Any human-edited templates — those live in `extensions/_shared/defaults/` (committed to repo).
+
+## CLI provenance outside `.brain/`
+
+The standalone CLI keeps controller data in the sibling `.osp-run/` directory:
+`run.json`, `provenance.json`, `source-manifest.json`, `session.json`, and the
+redacted `mcp-retrieval.jsonl`. The run and stable delivery manifests carry
+contract versions `brain_layout=2.2`, `artifact_contract=2.2`,
+`final_review=2.2`, and `run_state=osp-run-v2`.

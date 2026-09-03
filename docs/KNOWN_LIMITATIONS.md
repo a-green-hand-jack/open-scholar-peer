@@ -29,3 +29,9 @@ Re-running an earlier phase does not automatically invalidate later artifacts. U
 ## Provider sandbox constraints
 
 OpenCode runs with the run-local permissions configured by OSP. Network retrieval is controlled by `--network-policy`; offline runs must report unavailable external evidence. Review agents must write scratch files only under `.brain/tmp/` and may not modify the imported `source/` directory.
+
+`scholarly` grants the bundled academic MCP route but deliberately denies
+generic OpenCode web tools. Harbor is responsible for allowing its agent
+provisioning and model-provider hosts in addition to the scholarly hosts. The
+benchmark integration remains agent-agnostic; OSP is a CLI invoked in the task
+environment, not a Harbor adapter. See [`HARBOR.md`](HARBOR.md).

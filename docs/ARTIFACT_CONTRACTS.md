@@ -2,6 +2,25 @@
 
 Every workflow step has a strict I/O contract. The agent **must** load only the artifacts in `reads:` (not the whole `.brain/`) and **must** write the single artifact in `writes:`. This is how context-awareness is enforced without dumping the full transcript into every persona.
 
+## Runtime compatibility contract
+
+The CLI writes the following contract set into run provenance and the stable
+delivery manifest. Consumers must reject a missing or incompatible value before
+archiving a run:
+
+```text
+brain_layout       2.2
+artifact_contract  2.2
+final_review       2.2
+run_state          osp-run-v2
+```
+
+For a completed CLI run, the final report exists both at
+`.brain/review/final_review.md` and at the stable parent output path
+`final_review.md`; `run-manifest.json` identifies its SHA-256, run directory,
+scope, provenance, and contracts. An explicit `--final-output` may write a
+consumer-owned submission file, but it is never allowed to target `source/`.
+
 ## Universal artifact structure
 
 Every `.brain/raw/*.md` file (and `review/final_review.md`) has three required top-level sections:

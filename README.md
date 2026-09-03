@@ -29,6 +29,8 @@ node dist/cli.js review ./paper.pdf
 
 See [`docs/OSP_CLI.md`](docs/OSP_CLI.md) for the complete user guide,
 dependency list, workflow, and recovery procedures.
+For the supported agent-agnostic Harbor benchmark invocation, see
+[`docs/HARBOR.md`](docs/HARBOR.md).
 
 ## Review
 
@@ -57,6 +59,12 @@ unavailable. Use `--prepare-only` to validate the input and local runtime
 before starting a model session.
 
 Without `--headless`, OSP starts an OpenCode server and attaches the native `opencode attach` TUI. `--headless` uses the same controller without attaching a terminal UI. Modes are `autonomous` and `collaborative`; the latter pauses at phase gates until approved.
+
+The default `--network-policy scholarly` permits the bundled academic MCP
+providers while denying generic OpenCode web tools. Use `online` only when the
+review explicitly needs generic web access, or `offline` to disable the
+networked MCP runtime. The complete Harbor-ready command and its stable output
+paths are in [`docs/HARBOR.md`](docs/HARBOR.md).
 
 Useful commands:
 
@@ -108,6 +116,7 @@ osp doctor
 ```bash
 npm run typecheck
 npm run build
+npm run lint
 npm test
 python3 -m unittest discover tests -p 'test_*.py'
 ```

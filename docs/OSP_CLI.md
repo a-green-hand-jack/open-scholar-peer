@@ -31,9 +31,10 @@ The selected OpenCode provider/model must already be configured and usable.
 OSP does not store model credentials in the paper, workspace artifacts, or
 command arguments.
 
-Online runs require network access to the model provider and literature
-providers. Offline mode disables web access and does not prepare the networked
-MCP server.
+The default `scholarly` policy enables the bundled academic MCP providers while
+denying generic OpenCode `webfetch` and `websearch`. `online` additionally
+allows those generic web tools; `offline` disables the networked MCP server.
+The model provider remains a host-level OpenCode requirement in every mode.
 
 ### Optional Providers
 
@@ -124,7 +125,7 @@ osp review <pdf-or-tex-source> [options]
 
 The command creates a timestamped isolated workspace, imports the source, installs canonical OSP assets from `extensions/_shared`, prepares the local MCP server, initializes Git state, and starts the fixed seven-phase controller. Native TUI mode is the default. `--headless` uses the same controller without attaching `opencode attach`. `--qa-pairs` persists the positive number of ordered Q&A pairs per criterion.
 
-Important options are `--mode autonomous|collaborative`, `--model provider/model`, `--variant`, `--timeout`, `--qa-pairs`, `--network-policy online|offline`, `--output`, `--prepare-only`, and `--allow-lkm-spend`.
+Important options are `--mode autonomous|collaborative`, `--model provider/model`, `--variant`, `--timeout`, `--qa-pairs`, `--network-policy scholarly|online|offline`, `--output`, `--prepare-only`, `--final-output`, `--trail`, and `--allow-lkm-spend`.
 
 Supported input types are PDF files, TeX directories, ZIP/TAR archives, and
 existing OSP workspaces. Input is copied into a read-only `source/` directory;
@@ -196,15 +197,21 @@ osp-review/
     └── opencode.json                 per-run permissions and MCP config
 ```
 
-The final report is:
+The final report inside the isolated run is:
 
 ```text
 <run-directory>/.brain/review/final_review.md
 ```
 
-Intermediate artifacts are under `.brain/raw/`. `.osp-run/run.json` records
-phase status, model scope, input digest, and resume state. The original input
-is never edited.
+After a completed run, OSP exports a stable report at
+`<output>/final_review.md` and a machine-readable
+`<output>/run-manifest.json`; the latter records the source digest, provenance,
+and versioned contracts. `--final-output <path>` also writes the same final
+review to an explicit submission path, such as
+`/workspace/submission/review.md`. `--trail <directory>` copies the auditable
+subset into an immutable trail entry. Intermediate artifacts are under
+`.brain/raw/`. `.osp-run/run.json` records phase status, model scope, input
+digest, resume state, and contracts. The original input is never edited.
 
 ## State and recovery
 
@@ -220,6 +227,11 @@ osp approve <run>
 
 Resume verifies the locked input digest and scope digest before starting. A collaborative gate is released by `osp approve <run>`; changing mode does not retroactively bypass an existing gate.
 
+Headless collaborative runs do not wait indefinitely for an interactive
+question or controller gate. They enter `gate_waiting`; run `osp approve` and
+then `osp resume --headless` when an explicit approval is available. Native
+OpenCode questions are enabled only for the attached interactive TUI.
+
 ## Protocol contract
 
 The controller cannot skip or reorder:
@@ -228,7 +240,18 @@ The controller cannot skip or reorder:
 onboarding -> summary -> literature -> historian -> baseline_scout -> qa -> review
 ```
 
-Literature runs exactly three rounds. Q&A produces exactly `session.json.qa_pairs_per_criterion` pairs for each criterion. The validator checks artifact sections, round strategies, Q&A numbering, final review structure, score rows, recommendation vocabulary, and evidence anchors.
+Literature runs exactly three rounds. Q&A produces exactly `session.json.qa_pairs_per_criterion` pairs for each criterion. The validator checks artifact sections, round strategies, Q&A numbering, final review structure, score rows, recommendation vocabulary, evidence anchors, and compatible runtime contracts.
+
+```text
+brain_layout       2.2
+artifact_contract  2.2
+final_review       2.2
+run_state          osp-run-v2
+```
+
+Use only validated runs when a downstream benchmark or archive consumes OSP
+output. See [`HARBOR.md`](HARBOR.md) for the exact agent-agnostic Harbor
+invocation and material-manifest behavior.
 
 ## Troubleshooting
 

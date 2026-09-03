@@ -1,8 +1,9 @@
-import { mkdir, cp, writeFile } from "node:fs/promises";
+import { mkdir, cp, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { execa } from "execa";
+import { allowsMcp, allowsOpenCodeWeb, type NetworkPolicy } from "./network.js";
 
 function projectRoot(): string {
   return resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -16,7 +17,7 @@ async function venvPython(): Promise<string> {
   throw new Error("no Python interpreter with ensurepip is available");
 }
 
-export async function installRuntimeAssets(workspace: string, networkPolicy: "online" | "offline", mode: "autonomous" | "collaborative", prepareMcp = true, allowLkmSpend = false): Promise<string> {
+export async function installRuntimeAssets(workspace: string, networkPolicy: NetworkPolicy, mode: "autonomous" | "collaborative", prepareMcp = true, allowLkmSpend = false, interactive = false): Promise<string> {
   const root = projectRoot();
   const canonical = join(root, "extensions", "_shared");
   await cp(join(canonical, "commands"), join(workspace, ".opencode", "commands"), { recursive: true });
@@ -26,7 +27,9 @@ export async function installRuntimeAssets(workspace: string, networkPolicy: "on
   const mcpRoot = join(workspace, ".open-scholar-peer", "mcp");
   await mkdir(mcpRoot, { recursive: true });
   await cp(join(root, "mcp-server"), mcpRoot, { recursive: true });
-  const enableMcp = prepareMcp && networkPolicy === "online";
+  const enableMcp = prepareMcp && allowsMcp(networkPolicy);
+  const allowWeb = allowsOpenCodeWeb(networkPolicy);
+  const allowQuestions = mode === "collaborative" && interactive;
   const pythonBase = enableMcp ? await venvPython() : "python3";
   const venv = join(mcpRoot, ".venv");
   let python = pythonBase;
@@ -44,17 +47,40 @@ export async function installRuntimeAssets(workspace: string, networkPolicy: "on
     share: "disabled",
     permission: {
       "*": "deny", read: "allow", glob: "allow", grep: "allow", edit: "allow", write: "allow", patch: "allow", task: "allow", "osp_*": "allow",
-      webfetch: networkPolicy === "offline" ? "deny" : "allow", websearch: networkPolicy === "offline" ? "deny" : "allow",
-      external_directory: "deny", question: mode === "collaborative" ? "allow" : "deny", bash: "deny",
+      webfetch: allowWeb ? "allow" : "deny", websearch: allowWeb ? "allow" : "deny",
+      external_directory: "deny", question: allowQuestions ? "allow" : "deny", bash: "deny",
     },
     agent: {
       "osp-runner": {
         mode: "primary", description: "Open ScholarPeer phase executor",
-        permission: { "*": "deny", read: "allow", glob: "allow", grep: "allow", edit: "allow", write: "allow", patch: "allow", task: "allow", "osp_*": "allow", webfetch: networkPolicy === "offline" ? "deny" : "allow", websearch: networkPolicy === "offline" ? "deny" : "allow", external_directory: "deny", question: mode === "collaborative" ? "allow" : "deny", bash: "deny" },
+        permission: { "*": "deny", read: "allow", glob: "allow", grep: "allow", edit: "allow", write: "allow", patch: "allow", task: "allow", "osp_*": "allow", webfetch: allowWeb ? "allow" : "deny", websearch: allowWeb ? "allow" : "deny", external_directory: "deny", question: allowQuestions ? "allow" : "deny", bash: "deny" },
       },
     },
-     mcp: enableMcp ? { osp: { type: "local", command: ["env", `OSP_ALLOW_LKM_SPEND=${allowLkmSpend ? "1" : "0"}`, `OSP_WORKSPACE_ROOT=${workspace}`, python, join(mcpRoot, "osp_mcp.py")], enabled: true } } : {},
+     mcp: enableMcp ? { osp: { type: "local", command: ["env", `OSP_ALLOW_LKM_SPEND=${allowLkmSpend ? "1" : "0"}`, `OSP_NETWORK_POLICY=${networkPolicy}`, `OSP_WORKSPACE_ROOT=${workspace}`, python, join(mcpRoot, "osp_mcp.py")], enabled: true } } : {},
   };
   await writeFile(join(workspace, "opencode.json"), `${JSON.stringify(config, null, 2)}\n`, "utf8");
   return join(mcpRoot, "osp_mcp.py");
+}
+
+/**
+ * Single-persona phases run inline; only Q&A needs its answer subagent, so the
+ * `task` permission is granted for that phase alone.
+ */
+export async function setPhaseTaskPolicy(workspace: string, phase: string): Promise<void> {
+  const path = join(workspace, "opencode.json");
+  const config = JSON.parse(await readFile(path, "utf8")) as { permission: Record<string, string>; agent: Record<string, { permission: Record<string, string> }> };
+  const action = phase === "qa" ? "allow" : "deny";
+  config.permission.task = action;
+  config.agent["osp-runner"].permission.task = action;
+  await writeFile(path, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+}
+
+/** Keep interactive questions unavailable in autonomous and headless runs. */
+export async function setQuestionPolicy(workspace: string, allowed: boolean): Promise<void> {
+  const path = join(workspace, "opencode.json");
+  const config = JSON.parse(await readFile(path, "utf8")) as { permission: Record<string, string>; agent: Record<string, { permission: Record<string, string> }> };
+  const action = allowed ? "allow" : "deny";
+  config.permission.question = action;
+  config.agent["osp-runner"].permission.question = action;
+  await writeFile(path, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 }

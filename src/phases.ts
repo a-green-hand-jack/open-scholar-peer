@@ -40,3 +40,13 @@ export const LITERATURE_STRATEGIES = [
   "method-anchor",
   "temporal-expansion",
 ] as const;
+
+/**
+ * Artifact paths a phase is contracted to write. Q&A expands to one file per
+ * onboarding-declared criterion.
+ */
+export function expectedOutputs(session: unknown, phase: Phase): string[] {
+  if (phase !== "qa") return [...FIXED_OUTPUTS[phase]];
+  const criteria = (session as { qa_criteria?: Array<{ slug?: string }> } | null)?.qa_criteria ?? [];
+  return criteria.filter((criterion) => criterion.slug).map((criterion) => `.brain/raw/05_qa_${criterion.slug}.md`);
+}

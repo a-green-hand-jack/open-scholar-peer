@@ -21,20 +21,27 @@ onboarding -> summary -> literature -> historian -> baseline_scout -> qa -> revi
 - [x] Headless controller and native TUI attach path
 - [x] Autonomous and collaborative gate policy with `osp approve`
 - [x] Artifact validation, Git checkpoints, scope checks, and resume
+- [x] Versioned downstream contracts and stable final-review delivery manifest
+- [x] Harbor material-manifest import and explicit submission-path export
+- [x] Scholarly, online, and offline network policies
 - [x] Real PDF end-to-end review producing final review output
-- [x] TypeScript, Python compatibility, install, and validation tests
+- [x] TypeScript, Python compatibility, lint, install, and validation tests
 
 ## Verification
 
 ```bash
 npm run typecheck
 npm run build
+npm run lint
 npm test
 python3 -m unittest discover tests -p 'test_*.py'
 osp doctor
 osp review docs/paper/scholar_peer_arxiv.pdf --output /tmp/osp-e2e --headless --mode autonomous
 osp validate /tmp/osp-e2e/<run>
 ```
+
+For the six-task Harbor acceptance run and its pinned, agent-agnostic
+submission contract, see [`HARBOR.md`](HARBOR.md).
 
 ## Scope
 
