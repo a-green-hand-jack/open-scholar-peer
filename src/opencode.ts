@@ -8,6 +8,8 @@ export type OpenCodeRuntime = {
   owned: boolean;
 };
 
+const SERVER_START_TIMEOUT_MS = 30_000;
+
 async function unwrap<T>(result: PromiseLike<{ data?: T; error?: unknown }>, operation: string): Promise<T> {
   const response = await result;
   if (response.error) throw new Error(`OpenCode ${operation} failed: ${JSON.stringify(response.error)}`);
@@ -16,7 +18,7 @@ async function unwrap<T>(result: PromiseLike<{ data?: T; error?: unknown }>, ope
 }
 
 export async function startOpenCode(directory: string): Promise<OpenCodeRuntime> {
-  const server = await createOpencodeServer({ hostname: "127.0.0.1", port: 0 });
+  const server = await createOpencodeServer({ hostname: "127.0.0.1", port: 0, timeout: SERVER_START_TIMEOUT_MS });
   return { client: createOpencodeClient({ baseUrl: server.url, directory }), serverUrl: server.url, close: server.close, owned: true };
 }
 
