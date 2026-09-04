@@ -31,3 +31,20 @@ reviewer-os/
 # Node build/dependency output
 node_modules/
 /dist/
+
+# Python build and runtime output.
+# OSP itself is TypeScript, but harbor/osp_harbor/ is a Python Harbor adapter
+# and importing it writes bytecode next to the source. Two .pyc files reached
+# main this way once already; these rules are unanchored on purpose so they
+# hold for any Python that appears anywhere in the tree, not just at the root.
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
