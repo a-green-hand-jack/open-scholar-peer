@@ -55,8 +55,16 @@ done
 
 # Credentials stay in the environment; nothing is written to the command line,
 # the job record, or the task.
+# Parsed rather than sourced: a stray space in `KEY = value` makes `.` execute
+# the name as a command, and under `set -e` that kills the run before it starts.
 if [[ -f "$repo_root/.env" ]]; then
-  set -a; . "$repo_root/.env"; set +a
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "$line" =~ ^[[:space:]]*# ]] && continue
+    [[ "$line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=[[:space:]]*(.*)$ ]] || continue
+    value="${BASH_REMATCH[2]}"
+    value="${value%\"}"; value="${value#\"}"
+    export "${BASH_REMATCH[1]}=$value"
+  done < "$repo_root/.env"
 fi
 : "${OPENAI_BASE_URL:=${APEX_BASE_URL:-}}"
 : "${OPENAI_API_KEY:=${APEX_API_KEY:-}}"
