@@ -4,7 +4,7 @@ Open ScholarPeer (OSP) is an independent OpenCode-native Paper Review Agent for 
 
 ## Install
 
-Requirements: Node.js 20+, OpenCode 1.18.25+, Python 3.10+ with `venv`, and Poppler `pdftotext`/`pdfinfo` for PDF input and optional LKM PDF extraction.
+Requirements: Node.js 20+, OpenCode 1.18.25+, and Poppler `pdftotext`/`pdfinfo` for PDF input and optional LKM PDF extraction.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/a-green-hand-jack/open-scholar-peer/main/install_cli.sh | bash
@@ -93,18 +93,16 @@ Supported inputs are PDF files, TeX directories, ZIP/TAR archives, and existing 
 
 ## Dependencies
 
-The runtime requires Node.js 20+, OpenCode 1.18.25+, Python 3.10+ with
-`venv`/`ensurepip`, Git, and Poppler `pdftotext` for PDF input. Online runs
-also need network access to the selected model provider and literature
-providers. The per-run MCP Python environment is installed automatically.
+The runtime requires Node.js 20+, OpenCode 1.18.25+, Git, and Poppler
+`pdftotext` for PDF input. Online runs also need network access to the selected
+model provider and literature providers. The MCP retrieval server ships inside
+the CLI build, so a run provisions nothing.
 
 Optional integrations are Bohrium `bohr` CLI for LKM retrieval and a Semantic
 Scholar API key for higher rate limits. Check the local installation with:
 
 ```bash
 node --version
-python3 --version
-python3 -c "import ensurepip, venv"
 pdftotext -v
 git --version
 opencode --version
@@ -118,10 +116,9 @@ npm run typecheck
 npm run build
 npm run lint
 npm test
-python3 -m unittest discover tests -p 'test_*.py'
 ```
 
-The canonical OSP commands, personas, defaults, and rules are in [`extensions/_shared`](extensions/_shared). The Python MCP server and academic providers are in [`mcp-server`](mcp-server). Other coding-agent adapters and their installers are intentionally not part of this project.
+The canonical OSP commands, personas, defaults, and rules are in [`extensions/_shared`](extensions/_shared). The MCP server and its academic providers are in [`src/mcp`](src/mcp). Other coding-agent adapters and their installers are intentionally not part of this project.
 
 See [`docs/OSP_CLI.md`](docs/OSP_CLI.md) for runtime details and [`docs/ARTIFACT_CONTRACTS.md`](docs/ARTIFACT_CONTRACTS.md) for the phase contracts.
 

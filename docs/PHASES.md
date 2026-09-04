@@ -16,7 +16,7 @@ onboarding -> summary -> literature -> historian -> baseline_scout -> qa -> revi
 - [x] Fixed seven-phase registry and versioned run state
 - [x] PDF, TeX directory, ZIP/TAR input import and source digest
 - [x] Canonical `_shared` asset installation into isolated `.opencode/`
-- [x] Per-run MCP server and Python venv setup
+- [x] MCP retrieval server compiled into the CLI build
 - [x] OpenCode server/session integration
 - [x] Headless controller and native TUI attach path
 - [x] Autonomous and collaborative gate policy with `osp approve`
@@ -25,7 +25,7 @@ onboarding -> summary -> literature -> historian -> baseline_scout -> qa -> revi
 - [x] Harbor material-manifest import and explicit submission-path export
 - [x] Scholarly, online, and offline network policies
 - [x] Real PDF end-to-end review producing final review output
-- [x] TypeScript, Python compatibility, lint, install, and validation tests
+- [x] TypeScript, lint, install, and validation tests
 
 ## Verification
 
@@ -34,7 +34,6 @@ npm run typecheck
 npm run build
 npm run lint
 npm test
-python3 -m unittest discover tests -p 'test_*.py'
 osp doctor
 osp review docs/paper/scholar_peer_arxiv.pdf --output /tmp/osp-e2e --headless --mode autonomous
 osp validate /tmp/osp-e2e/<run>

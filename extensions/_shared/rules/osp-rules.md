@@ -58,7 +58,6 @@ After the phase completes, the closing report block must say **what was done** (
 ## File ownership
 
 - `.brain/` is gitignored — never commit it.
-- `.open-scholar-peer/` (MCP server + venv) is gitignored — never commit it.
 - Tool-specific config files (`.mcp.json`, `.claude/`, etc.) at project root are user-editable.
 - The TypeScript runtime copies canonical assets from `extensions/_shared/` into isolated review workspaces. Edit `_shared/` and verify with `npm test`.
 

@@ -10,7 +10,7 @@ osp --version
 osp doctor
 ```
 
-The supported CLI requires Node.js 20+, OpenCode 1.18.25+, Python 3.10+ with `venv`, and Poppler `pdftotext` for PDF input. If an older Python `osp` wrapper is found first, put the directory from `OSP_BIN_DIR` first in `PATH`.
+The supported CLI requires Node.js 20+, OpenCode 1.18.25+, and Poppler `pdftotext` for PDF input. If an older Python `osp` wrapper is found first, put the directory from `OSP_BIN_DIR` first in `PATH`.
 
 ## Preparation
 
@@ -42,10 +42,10 @@ Autonomous mode never waits for user questions and uses the configured/default v
 
 ## MCP
 
-The MCP server is installed per run at `.open-scholar-peer/mcp/`. If setup fails, provide a Python interpreter with `ensurepip`:
+The MCP server ships inside the CLI build and needs no per-run setup. To check it in isolation:
 
 ```bash
-PYTHON=/path/to/python3 osp review ./paper.pdf --prepare-only
+node dist/mcp/server.js
 ```
 
 Provider failures and rate limits are recorded as unresolved provenance. They must not be replaced with fabricated citations.
@@ -56,7 +56,6 @@ Provider failures and rate limits are recorded as unresolved provenance. They mu
 npm run typecheck
 npm run build
 npm test
-python3 -m unittest discover tests -p 'test_*.py'
 ```
 
 The old multi-tool adapter and installer system has been retired. Canonical Markdown assets are under `extensions/_shared/`; do not run or recreate the deleted adapter scripts.

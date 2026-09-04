@@ -1,6 +1,6 @@
 # Contributing
 
-Open ScholarPeer is an OpenCode-native TypeScript Agent. The runtime is in `src/`; canonical OSP prompts, personas, rules, and defaults are in `extensions/_shared/`; the retained Python MCP server is in `mcp-server/`.
+Open ScholarPeer is an OpenCode-native TypeScript Agent. The runtime is in `src/`; canonical OSP prompts, personas, rules, and defaults are in `extensions/_shared/`; the MCP retrieval server is in `src/mcp/`.
 
 ## Checks
 
@@ -9,7 +9,6 @@ npm install
 npm run typecheck
 npm run build
 npm test
-python3 -m unittest discover tests -p 'test_*.py'
 ```
 
 ## Changes

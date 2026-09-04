@@ -22,10 +22,9 @@ Required on the host:
 | Node.js | 20+ | Runs the OSP CLI |
 | npm | Node-compatible | Installs and builds OSP |
 | OpenCode | 1.18.25+ | Agent runtime, model access, and TUI |
-| Python | 3.10+ | Runs the per-run MCP server |
-| Python `venv` and `ensurepip` | available | Creates the isolated MCP environment |
 | Git | available | Creates auditable phase checkpoints |
 | Poppler `pdftotext` | available for PDF input | Extracts PDF text |
+| Poppler `pdfinfo` | optional | Bounds the LKM PDF page limit |
 
 The selected OpenCode provider/model must already be configured and usable.
 OSP does not store model credentials in the paper, workspace artifacts, or
@@ -193,7 +192,6 @@ osp-review/
     ├── .brain/                       phase artifacts and final review
     ├── .osp-run/                     controller state and source manifest
     ├── .opencode/                    installed OSP commands and personas
-    ├── .open-scholar-peer/mcp/       isolated MCP server and Python venv
     └── opencode.json                 per-run permissions and MCP config
 ```
 
@@ -257,6 +255,6 @@ invocation and material-manifest behavior.
 
 - If `osp` resolves to an older program, inspect `command -v osp`, put the install bin directory first in `PATH`, or invoke the installed `dist/cli.js` directly.
 - If PDF preparation fails, install Poppler and verify `pdftotext -v`.
-- If MCP preparation fails, use Python 3.10+ with `ensurepip` and `venv`, or pass `PYTHON=/path/to/python` to the installer/runtime.
+- If MCP retrieval fails, check that `node dist/mcp/server.js` starts and that the network policy permits the academic providers.
 - If a run fails, keep the workspace, inspect `osp status` and `.osp-run`, then use `osp resume` after addressing the reported cause.
 - Dedicated retrieval providers may be unavailable or rate-limited. OSP records that limitation as unresolved provenance; it must not be converted into invented evidence.

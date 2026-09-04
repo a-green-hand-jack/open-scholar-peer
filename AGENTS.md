@@ -17,12 +17,8 @@ npm run typecheck
 npm run build
 npm test
 
-# Python MCP checks:
-python3 -c "import ast; ast.parse(open('mcp-server/osp_mcp.py').read()); ast.parse(open('mcp-server/providers/bohrium.py').read())"
-python3 -m unittest discover tests -p 'test_*.py'
-
 # Run the MCP server standalone (debug mode):
-cd mcp-server && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/python osp_mcp.py
+node dist/mcp/server.js
 ```
 
 ## Architecture (one paragraph)
@@ -37,7 +33,6 @@ The old per-tool adapter directories are retired. Edit `extensions/_shared/`; th
 
 ## Code style
 
-- **Python:** PEP 8, type hints encouraged, modern syntax (`dict[str, Any]` not `Dict`). Stdlib first; new dependencies need a justification.
 - **Bash:** always `set -e`; use `[[...]]` not `[...]`; quote all expansions; prefer `command -v X` over `which X`.
 - **Markdown:** no HTML in canonical content. Fenced code blocks with language tags.
 - **Frontmatter** on commands/skills is shallow YAML consumed by the runtime; keep it free of nested objects and anchors.
@@ -50,8 +45,8 @@ The old per-tool adapter directories are retired. Edit `extensions/_shared/`; th
 - When adding or renaming a command/skill, update **both** `extensions/_shared/MANIFEST.md` and `docs/ARTIFACT_CONTRACTS.md`.
 - Q&A uses OpenCode subagent isolation. Autonomous runs deny questions; collaborative runs permit them and pause at controller-owned gates.
 - Paper hyperparameters: `k=3` literature rounds is fixed (enforced via 3 round files); `N_QA` is **user-configurable** at `/5-osp-qa` start (default 2 pairs/criterion, persisted as `session.json.qa_pairs_per_criterion`). The Q&A template renders `### Q1`…`### QN` from that field.
-- The MCP server runs as a subprocess of the host tool over stdio. To debug, run `python3 mcp-server/osp_mcp.py` standalone — it'll wait for MCP protocol messages and surface any startup errors.
-- `src/config.ts` copies `mcp-server/` into `<review-workspace>/.open-scholar-peer/mcp/` and builds a venv there. The dev repo's `mcp-server/` is the source; the per-run copy is the runtime.
+- The MCP server runs as a subprocess of the host tool over stdio. To debug, run `node dist/mcp/server.js` standalone — it'll wait for MCP protocol messages and surface any startup errors.
+- `src/config.ts` points each run's `opencode.json` at the installed `dist/mcp/server.js`. Nothing is copied or provisioned per run; the compiled build is the runtime.
 
 ## Where things live
 
@@ -63,9 +58,10 @@ extensions/_shared/             ← Edit here. Single source of truth.
   ├── defaults/                  Templates that enforce structure
   └── MANIFEST.md                Canonical asset catalog
 
-mcp-server/
-  ├── osp_mcp.py                 FastMCP server entrypoint
-  └── providers/                 arxiv / semantic_scholar / google_scholar
+src/mcp/
+  ├── server.ts                  MCP server entrypoint (23 retrieval tools)
+  ├── descriptions.ts            Tool descriptions agents read to pick a tool
+  └── providers/                 arxiv / semanticScholar / googleScholar / bohrium
                                  (drop a new module here to add a provider)
 
 src/                              TypeScript CLI, controller, input, validation, and OpenCode integration
@@ -94,7 +90,7 @@ docs/
 - `src/backend` (DeepAgents JS / LangGraph runtime) — deferred.
 - `src/frontend` (Deep Agents UI fork) — deferred.
 - Plugin marketplace integrations — explicitly avoided (vendor lock-in).
-- PyPI publishing of `osp-mcp` — deferred; current model is self-contained venv per project.
+- Separate npm publishing of the MCP server — deferred; it ships inside the CLI build.
 - CI release checks are manual today.
 - Multi-paper sessions — currently one paper per `.brain/`.
 
@@ -163,7 +159,6 @@ After the phase completes, the closing report block must say **what was done** (
 ## File ownership
 
 - `.brain/` is gitignored — never commit it.
-- `.open-scholar-peer/` (MCP server + venv) is gitignored — never commit it.
 - Tool-specific config files (`.mcp.json`, `.claude/`, etc.) at project root are user-editable.
 - The TypeScript runtime copies canonical assets from `extensions/_shared/` into isolated review workspaces. Edit `_shared/` and verify with `npm test`.
 <!-- OSP-END -->

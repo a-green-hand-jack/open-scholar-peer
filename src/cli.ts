@@ -231,11 +231,9 @@ program.command("doctor").action(async () => {
   await probe("opencode", true, "opencode", ["--version"]);
   await probe("git", true, "git", ["--version"]);
   await probe("pdftotext", true, "pdftotext", ["-v"], (stdout) => stdout.split("\n")[0]);
-  let python = "not available";
-  for (const candidate of [process.env.PYTHON, "python3.13", "python3.12", "python3.11", "python3"].filter(Boolean) as string[]) {
-    try { await execa(candidate, ["-c", "import ensurepip"]); python = `${candidate} ${(await execa(candidate, ["--version"])).stdout.trim()}`; break; } catch { /* try next */ }
-  }
-  checks.push({ name: "python+ensurepip", passed: python !== "not available", required: true, detail: python });
+  // pdfinfo bounds the LKM PDF page limit inside the MCP server. It ships with
+  // pdftotext in Poppler, but only matters when Bohrium extraction is used.
+  await probe("pdfinfo", false, "pdfinfo", ["-v"], (stdout) => stdout.split("\n")[0]);
   try {
     await execa("bohr", ["auth", "status"], { stdio: "ignore" });
     checks.push({ name: "bohr", passed: true, required: false, detail: "authenticated (LKM enabled)" });

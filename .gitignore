@@ -16,27 +16,17 @@ reviewer-os/
 # missing from every clone until this fix — see a-green-hand-jack/paper-review#6.
 /.claude/
 
-# Python
-__pycache__/
-*.py[cod]
-.venv/
-
 # Editor / OS noise
 .DS_Store
 .idea/
 .vscode/
 *.swp
 
-# Open ScholarPeer MCP runtime (venv + server, gitignored)
-.open-scholar-peer/
+# Open ScholarPeer run state
 /.osp-run/
 
 # API keys (never commit)
 .env
-
-# Python build output
-/build/
-/*.egg-info/
 
 # Node build/dependency output
 node_modules/
