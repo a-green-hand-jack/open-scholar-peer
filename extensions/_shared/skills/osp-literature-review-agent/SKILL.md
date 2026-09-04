@@ -70,13 +70,13 @@ budget), do not attempt it inside this skill — just proceed without seeds.
 
 In each round, dispatch that round's primary LKM search together with arXiv and Semantic Scholar. After results return, expand a top LKM paper graph where the round calls for it:
 
-- `osp-mcp.search_bohrium_lkm` — claims, conclusions, and abstracts
-- `osp-mcp.search_bohrium_reasoning` — method reasoning chains
-- `osp-mcp.search_bohrium_paper` — structured metadata and year filters
-- `osp-mcp.get_bohrium_paper_graph` — bounded top-hit expansion
-- `osp-mcp.search_arxiv` — pre-prints
-- `osp-mcp.search_semantic_scholar` — citation graph, well-indexed publications
-- `osp-mcp.search_google_scholar` — fallback only after an LKM error
+- `osp_search_bohrium_lkm` — claims, conclusions, and abstracts
+- `osp_search_bohrium_reasoning` — method reasoning chains
+- `osp_search_bohrium_paper` — structured metadata and year filters
+- `osp_get_bohrium_paper_graph` — bounded top-hit expansion
+- `osp_search_arxiv` — pre-prints
+- `osp_search_semantic_scholar` — citation graph, well-indexed publications
+- `osp_search_google_scholar` — fallback only after an LKM error
 - Native `Web Search` (when available) — only for non-academic context
 
 LKM availability is advisory, not a gate. Never claim LKM is unavailable without attempting a call. Use Google Scholar only when the round's primary LKM search returns an error and no primary LKM search returned usable data. Graph and PDF-extraction errors do not authorize fallback. Record actual tools, queries, paper IDs, errors, and fallback decisions in Provenance.

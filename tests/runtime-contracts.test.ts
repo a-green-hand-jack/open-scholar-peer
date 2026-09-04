@@ -70,7 +70,7 @@ describe("runtime contracts", () => {
     const directory = await mkdtemp(join(tmpdir(), "osp-audit-"));
     try {
       await mkdir(join(directory, ".osp-run"), { recursive: true });
-      const count = await recordRetrievalEvents(directory, "literature", [{ parts: [{ type: "tool", callID: "retrieval-1", tool: "osp_search_bohrium_papers", state: { status: "completed", input: { token: "secret-token" }, error: "Bearer private-token" } }] }]);
+      const count = await recordRetrievalEvents(directory, "literature", [{ parts: [{ type: "tool", callID: "retrieval-1", tool: "osp_search_bohrium_paper", state: { status: "completed", input: { token: "secret-token" }, error: "Bearer private-token" } }] }]);
       expect(count).toBe(1);
       const log = await readFile(join(directory, ".osp-run", "mcp-retrieval.jsonl"), "utf8");
       expect(log).not.toContain("secret-token");

@@ -45,7 +45,7 @@ to `defaults/domains/_generic.md` and note the fallback in Provenance.
 
 ## Tools
 
-Use the same retrieval tools as the Literature Agent (`osp-mcp.search_arxiv`, `search_semantic_scholar`, `search_google_scholar`, native Web Search).
+Use the same retrieval tools as the Literature Agent (`osp_search_arxiv`, `osp_search_semantic_scholar`, `osp_search_google_scholar`, native Web Search).
 
 Formulate queries from the profile's §05, not from a fixed template — across
 domains the targets are genuinely different objects. Whatever the domain, also

@@ -37,7 +37,7 @@ Invoke the `osp-baseline-scout-agent` skill.
 2. Read the domain profile named by `paper.domain_profile` — **§05 defines what to hunt for**, **§09 defines what must never be reported as missing**. If `paper.numerical_slice` is `true`, also read `defaults/domains/_numerical-slice.md`.
 3. Activate the `osp-baseline-scout-agent` skill.
 4. The skill identifies the paper's contribution and what the authors actually engaged with, from the structured summary's evidence section.
-5. The skill independently searches for the closest competing, superseding, or subsuming work, framed as the profile's §05 prescribes. Tools: `osp-mcp.search_*`, native Web Search.
+5. The skill independently searches for the closest competing, superseding, or subsuming work, framed as the profile's §05 prescribes. Tools: `osp_search_*`, native Web Search.
 6. The skill produces a table of gaps with severity ratings (high/medium/low). Every entry must cite a specific retrieved work — an unsupported "they should have compared to something" is not a finding.
 7. Write `.brain/raw/04_missing_baselines.md`.
 8. Update `session.json`:

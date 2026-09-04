@@ -5,13 +5,13 @@
 - **Strategy:** `{{strategy_slug}}` (one of: `sub-domain-anchor`, `method-anchor`, `temporal-expansion`)
 - **Goal of this round:** {{strategy_goal}}
 - **Tools used (LKM-first; Google Scholar fallback only):**
-  - `osp-mcp.search_bohrium_lkm`
-  - `osp-mcp.search_bohrium_reasoning` (round 2)
-  - `osp-mcp.search_bohrium_paper`
-  - `osp-mcp.get_bohrium_paper_graph` (top-hit expansion)
-  - `osp-mcp.search_arxiv`
-  - `osp-mcp.search_semantic_scholar`
-  - `osp-mcp.search_google_scholar` (fallback only after LKM error)
+  - `osp_search_bohrium_lkm`
+  - `osp_search_bohrium_reasoning` (round 2)
+  - `osp_search_bohrium_paper`
+  - `osp_get_bohrium_paper_graph` (top-hit expansion)
+  - `osp_search_arxiv`
+  - `osp_search_semantic_scholar`
+  - `osp_search_google_scholar` (fallback only after LKM error)
   - native Web Search (where available)
 - **Billing:** LKM searches cost 0.05 CNY/call; do not auto-page.
 - **Query formulation rules for this round:**
