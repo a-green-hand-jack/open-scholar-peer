@@ -78,5 +78,16 @@ valid provider access and may consume model or literature API credits.
 
 `bohr auth status` and `hf auth whoami` are intentionally run before the
 review. The mounted Bohrium directory must contain a portable Bohrium login;
-if it reports `logged_in: false`, authenticate the Bohrium CLI on the host and
-rerun the container. The Hugging Face cache must contain the host login token.
+if it reports `logged_in: false`, pass the host's current Bohrium access key
+without printing or storing it:
+
+```bash
+BOHR_ACCESS_KEY="$(bohr auth token)" docker run --rm \
+  -e BOHR_ACCESS_KEY \
+  -v "$HOME/.bohr:/root/.bohr:ro" \
+  --entrypoint bash open-scholar-peer:dev \
+  -lc 'bohr auth status'
+```
+
+The verified container output includes `ak_present: true` and
+`logged_in: true`. The Hugging Face cache must contain the host login token.
