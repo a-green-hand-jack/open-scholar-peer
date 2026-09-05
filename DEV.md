@@ -58,8 +58,11 @@ BOHR_ACCESS_KEY="$(bohr auth token)" docker run --rm \
 
 默认入口需要论文和模型，执行完整七阶段评审：
 
+长时间任务必须使用 detached 容器。不要在当前交互终端前台执行长时间的
+`docker run`，否则终端会一直被占用。使用 `-d` 后通过容器日志和状态命令监控。
+
 ```bash
-BOHR_ACCESS_KEY="$(bohr auth token)" docker run --rm \
+BOHR_ACCESS_KEY="$(bohr auth token)" docker run -d --name osp-review-<name> \
   -e OSP_MODEL=provider/model \
   -e OSP_ALLOW_LKM_SPEND=true \
   -e BOHR_ACCESS_KEY \
@@ -71,6 +74,22 @@ BOHR_ACCESS_KEY="$(bohr auth token)" docker run --rm \
   -v "$PWD/osp-docker-output:/tmp/osp-docker-output" \
   open-scholar-peer:dev
 ```
+
+后台运行后使用以下命令监控：
+
+```bash
+docker ps --filter name=osp-review-
+docker logs -f osp-review-<name>
+docker inspect --format '{{.State.Status}} {{.State.ExitCode}}' osp-review-<name>
+```
+
+完成后检查输出目录中的 `final_review.md` 和 `run-manifest.json`。查看完结果后清理容器：
+
+```bash
+docker rm osp-review-<name>
+```
+
+同时运行多篇论文时，每篇论文必须使用独立的容器名、输入挂载和输出目录。可以并行启动多个 detached 容器，不要让多个任务共享同一个 OSP 输出目录。
 
 默认联网策略是 `scholarly`。设置 `OSP_NETWORK_POLICY=online` 可以启用通用 web 工具。设置 `OSP_DOCKER_SOURCE` 可以指定容器内挂载的其他稿件路径。
 
