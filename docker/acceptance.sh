@@ -3,7 +3,11 @@ set -euo pipefail
 output="${OSP_DOCKER_OUTPUT:-/tmp/osp-docker-output}"
 source="${OSP_DOCKER_SOURCE:-/workspace/docs/paper/scholar_peer_arxiv.pdf}"
 : "${OSP_MODEL:?Set OSP_MODEL to a configured provider/model before running the container}"
-rm -rf "$output"; mkdir -p "$output"
+mkdir -p "$output"
+for entry in "$output"/* "$output"/.[!.]*; do
+  [[ -e "$entry" ]] || continue
+  rm -rf "$entry"
+done
 node dist/cli.js doctor
 bohr auth status
 hf auth whoami
