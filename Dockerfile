@@ -6,6 +6,8 @@ COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 ARG OPENCODE_VERSION=1.18.25
 RUN npm install --global "opencode-ai@${OPENCODE_VERSION}"
+ARG CODEX_VERSION=0.153.4
+RUN npm install --global "@openai/codex@${CODEX_VERSION}"
 COPY . .
 RUN npm run build && chmod +x dist/cli.js docker/acceptance.sh
 ENTRYPOINT ["bash", "docker/acceptance.sh"]
