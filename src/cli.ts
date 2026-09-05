@@ -39,8 +39,9 @@ async function prepare(source: string, output: string, mode: "autonomous" | "col
   const sessionPath = join(runDir, ".brain", "session.json");
   const session = JSON.parse(await readFile(sessionPath, "utf8"));
   try {
-    await execa("bohr", ["auth", "status"], { stdio: "ignore" });
-    session.mcp.bohrium_available = true;
+    const result = await execa("bohr", ["auth", "status"]);
+    const status = JSON.parse(result.stdout) as { data?: { logged_in?: boolean } };
+    session.mcp.bohrium_available = status.data?.logged_in === true;
   } catch {
     session.mcp.bohrium_available = false;
   }
@@ -235,8 +236,10 @@ program.command("doctor").action(async () => {
   // pdftotext in Poppler, but only matters when Bohrium extraction is used.
   await probe("pdfinfo", false, "pdfinfo", ["-v"], (stdout) => stdout.split("\n")[0]);
   try {
-    await execa("bohr", ["auth", "status"], { stdio: "ignore" });
-    checks.push({ name: "bohr", passed: true, required: false, detail: "authenticated (LKM enabled)" });
+    const result = await execa("bohr", ["auth", "status"]);
+    const status = JSON.parse(result.stdout) as { data?: { logged_in?: boolean } };
+    if (status.data?.logged_in === true) checks.push({ name: "bohr", passed: true, required: false, detail: "authenticated (LKM enabled)" });
+    else checks.push({ name: "bohr", passed: false, required: false, detail: "installed but not authenticated (LKM fallback-only)" });
   } catch {
     try { await execa("bohr", ["--version"], { stdio: "ignore" }); checks.push({ name: "bohr", passed: false, required: false, detail: "installed but not authenticated (LKM fallback-only)" }); }
     catch { checks.push({ name: "bohr", passed: false, required: false, detail: "not available (LKM fallback-only)" }); }
