@@ -33,10 +33,14 @@ onboarding -> summary -> literature -> historian -> baseline_scout -> qa -> revi
 npm run typecheck
 npm run build
 npm run lint
-npm test
 osp doctor
 osp review docs/paper/scholar_peer_arxiv.pdf --output /tmp/osp-e2e --headless --mode autonomous
 osp validate /tmp/osp-e2e/<run>
+```
+
+```bash
+docker build -t open-scholar-peer:dev .
+docker run --rm open-scholar-peer:dev
 ```
 
 For the six-task Harbor acceptance run and its pinned, agent-agnostic

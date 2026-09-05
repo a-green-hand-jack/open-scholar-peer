@@ -115,7 +115,11 @@ osp doctor
 npm run typecheck
 npm run build
 npm run lint
-npm test
+```
+
+```bash
+docker build -t open-scholar-peer:dev .
+docker run --rm -e OSP_MODEL=provider/model open-scholar-peer:dev
 ```
 
 The canonical OSP commands, personas, defaults, and rules are in [`extensions/_shared`](extensions/_shared). The MCP server and its academic providers are in [`src/mcp`](src/mcp). Other coding-agent adapters and their installers are intentionally not part of this project.

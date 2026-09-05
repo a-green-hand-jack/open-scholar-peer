@@ -8,7 +8,7 @@ Open ScholarPeer is an OpenCode-native TypeScript Agent. The runtime is in `src/
 npm install
 npm run typecheck
 npm run build
-npm test
+npm run lint
 ```
 
 ## Changes
@@ -17,11 +17,13 @@ Changes to the seven-stage protocol must update `src/phases.ts`, `docs/ARTIFACT_
 
 Do not add per-tool adapters or installers. Do not modify imported `source/` files. Runtime changes must preserve source isolation, scope digest checks, Git checkpoints, and report-only review behavior.
 
-## Runtime smoke test
+## Docker acceptance test
 
 ```bash
-node dist/cli.js doctor
-node dist/cli.js review docs/paper/scholar_peer_arxiv.pdf --output /tmp/osp-review --prepare-only
+docker build -t open-scholar-peer:dev .
+docker run --rm -e OSP_MODEL=provider/model open-scholar-peer:dev
 ```
 
-The full real review requires an available OpenCode provider and may use the academic retrieval MCP server. Keep failed workspaces for diagnosis and report unavailable tools as unresolved provenance.
+This runs a real model-backed review in an isolated user-like environment. Pass
+provider credentials and optional `OPENCODE_CONFIG` through the container
+environment; do not bake secrets into the image.

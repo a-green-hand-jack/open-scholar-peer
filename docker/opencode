@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1:-}" == "--version" ]]; then printf '%s\n' 'opencode 1.18.25 (Docker acceptance stub)'; exit 0; fi
+printf '%s\n' 'OpenCode is not started in prepare-only acceptance mode.'

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+output="${OSP_DOCKER_OUTPUT:-/tmp/osp-docker-output}"
+source="${OSP_DOCKER_SOURCE:-/workspace/docs/paper/scholar_peer_arxiv.pdf}"
+: "${OSP_MODEL:?Set OSP_MODEL to a configured provider/model before running the container}"
+rm -rf "$output"; mkdir -p "$output"
+node dist/cli.js doctor
+node dist/cli.js review "$source" --output "$output" --network-policy "${OSP_NETWORK_POLICY:-scholarly}" \
+  --headless --mode autonomous --model "$OSP_MODEL" --final-output "$output/final_review.md"
+run_dir="$(find "$output" -mindepth 1 -maxdepth 1 -type d -name 'osp-*' -print -quit)"
+[[ -n "$run_dir" ]]
+node dist/cli.js status "$run_dir" --json >/dev/null
+node dist/cli.js validate "$run_dir" --json
+[[ -s "$output/final_review.md" ]]
+[[ -f "$run_dir/.brain/review/final_review.md" ]]
+[[ -f "$run_dir/.osp-run/run.json" && -f "$run_dir/.osp-run/source-manifest.json" ]]
+[[ -f "$run_dir/.git/HEAD" ]]
+echo "OSP Docker acceptance passed: $run_dir"
