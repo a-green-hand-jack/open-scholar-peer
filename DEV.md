@@ -1,18 +1,21 @@
 # OSP Developer Verification
 
 This repository uses a Docker-backed, user-like integration run instead of
-unit tests. The image contains Node.js, OSP, OpenCode, Codex, Git and Poppler.
+unit tests. The image contains Node.js, OSP, OpenCode, Codex, Bohrium CLI,
+Hugging Face CLI, Git and Poppler. Docker networking is enabled by default.
 
 ## Configure Access
 
-The host configuration files are mounted read-only into the container. Do not
-copy them into the image or commit them:
+The host configuration and authentication directories are mounted read-only
+into the container. Do not copy credentials into the image or commit them:
 
 ```text
 OpenCode config: ~/.config/opencode/opencode.jsonc
 OpenCode auth:   ~/.local/share/opencode/auth.json
 Codex config:    ~/.codex/config.toml
 Codex auth:      ~/.codex/auth.json
+Bohrium auth:    ~/.bohr
+Hugging Face:    ~/.cache/huggingface
 ```
 
 ## Build
@@ -23,7 +26,7 @@ docker build -t open-scholar-peer:dev .
 
 ## Verify CLIs In The Container
 
-These commands verify that both CLIs can read the mounted configuration and
+These commands verify that the CLIs can read the mounted configuration and
 authentication files. They do not print file contents.
 
 ```bash
@@ -31,8 +34,10 @@ docker run --rm \
   -v "$HOME/.config/opencode:/root/.config/opencode:ro" \
   -v "$HOME/.local/share/opencode:/root/.local/share/opencode:ro" \
   -v "$HOME/.codex:/root/.codex:ro" \
+  -v "$HOME/.bohr:/root/.bohr:ro" \
+  -v "$HOME/.cache/huggingface:/root/.cache/huggingface:ro" \
   --entrypoint bash open-scholar-peer:dev \
-  -lc 'opencode --version && codex --version'
+  -lc 'opencode --version && codex --version && bohr --version && hf version && bohr auth status && hf auth whoami'
 ```
 
 ## Run The Real OSP Review
@@ -46,6 +51,8 @@ docker run --rm \
   -v "$HOME/.config/opencode:/root/.config/opencode:ro" \
   -v "$HOME/.local/share/opencode:/root/.local/share/opencode:ro" \
   -v "$HOME/.codex:/root/.codex:ro" \
+  -v "$HOME/.bohr:/root/.bohr:ro" \
+  -v "$HOME/.cache/huggingface:/root/.cache/huggingface:ro" \
   -v "$PWD/osp-docker-output:/tmp/osp-docker-output" \
   open-scholar-peer:dev
 ```
@@ -64,6 +71,12 @@ generated report and run:
 osp validate <run-directory>
 ```
 
-inside the container if a detailed validation report is needed. A model-backed
-run requires valid provider access and may consume model or literature API
-credits.
+inside the container if a detailed validation report is needed. The default
+`scholarly` network policy enables OSP academic providers; use
+`OSP_NETWORK_POLICY=online` for generic web tools. A model-backed run requires
+valid provider access and may consume model or literature API credits.
+
+`bohr auth status` and `hf auth whoami` are intentionally run before the
+review. The mounted Bohrium directory must contain a portable Bohrium login;
+if it reports `logged_in: false`, authenticate the Bohrium CLI on the host and
+rerun the container. The Hugging Face cache must contain the host login token.

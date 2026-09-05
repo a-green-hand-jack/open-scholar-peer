@@ -5,6 +5,8 @@ source="${OSP_DOCKER_SOURCE:-/workspace/docs/paper/scholar_peer_arxiv.pdf}"
 : "${OSP_MODEL:?Set OSP_MODEL to a configured provider/model before running the container}"
 rm -rf "$output"; mkdir -p "$output"
 node dist/cli.js doctor
+bohr auth status
+hf auth whoami
 node dist/cli.js review "$source" --output "$output" --network-policy "${OSP_NETWORK_POLICY:-scholarly}" \
   --headless --mode autonomous --model "$OSP_MODEL" --final-output "$output/final_review.md"
 run_dir="$(find "$output" -mindepth 1 -maxdepth 1 -type d -name 'osp-*' -print -quit)"
