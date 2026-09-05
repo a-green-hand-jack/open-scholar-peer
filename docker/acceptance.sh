@@ -3,6 +3,26 @@ set -euo pipefail
 output="${OSP_DOCKER_OUTPUT:-/tmp/osp-docker-output}"
 source="${OSP_DOCKER_SOURCE:-/workspace/docs/paper/scholar_peer_arxiv.pdf}"
 : "${OSP_MODEL:?Set OSP_MODEL to a configured provider/model before running the container}"
+run_dir=""
+mark_failed() {
+  local code=$?
+  if [[ "$code" -ne 0 && -n "$run_dir" && -f "$run_dir/.osp-run/run.json" ]]; then
+    node - "$run_dir/.osp-run/run.json" "$code" <<'NODE'
+const fs = require("node:fs");
+const path = process.argv[2];
+const code = Number(process.argv[3]);
+const state = JSON.parse(fs.readFileSync(path, "utf8"));
+if (state.status !== "completed") {
+  state.status = "failed";
+  state.error = `Docker acceptance exited with code ${code}`;
+  state.updated_at = new Date().toISOString();
+  fs.writeFileSync(path, `${JSON.stringify(state, null, 2)}\n`);
+}
+NODE
+  fi
+  return "$code"
+}
+trap mark_failed EXIT
 mkdir -p "$output"
 for entry in "$output"/* "$output"/.[!.]*; do
   [[ -e "$entry" ]] || continue
