@@ -11,8 +11,10 @@ done
 node dist/cli.js doctor
 bohr auth status
 hf auth whoami
-node dist/cli.js review "$source" --output "$output" --network-policy "${OSP_NETWORK_POLICY:-scholarly}" \
-  --headless --mode autonomous --model "$OSP_MODEL" --final-output "$output/final_review.md"
+review_args=(review "$source" --output "$output" --network-policy "${OSP_NETWORK_POLICY:-scholarly}" \
+  --headless --mode autonomous --model "$OSP_MODEL" --final-output "$output/final_review.md")
+if [[ "${OSP_ALLOW_LKM_SPEND:-false}" == "true" ]]; then review_args+=(--allow-lkm-spend); fi
+node dist/cli.js "${review_args[@]}"
 run_dir="$(find "$output" -mindepth 1 -maxdepth 1 -type d -name 'osp-*' -print -quit)"
 [[ -n "$run_dir" ]]
 node dist/cli.js status "$run_dir" --json >/dev/null
